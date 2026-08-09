@@ -1,5 +1,5 @@
 const daftarUser = {
-    "manokwari14": "bknmanokwari";
+    "manokwari14": "bknmanokwari",
     "14" : "14"
 };
 
