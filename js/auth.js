@@ -1,5 +1,6 @@
 const daftarUser = {
-    "manokwari14": "bknmanokwari","14" : "14"
+    "manokwari14": "bknmanokwari";
+    "14" : "14"
 };
 
 function prosesLogin(event) {
