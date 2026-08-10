@@ -23,7 +23,7 @@ function saveToHistory(isSilent = false) {
     // Simpan ke Firebase dengan ID berupa Timestamp
     db.ref('history/' + timestamp).set(currentState, function(error) {
         if (error) {
-            if (!isSilent) alert("❌ Gagal menyimpan data ke Firebase: " + error.message);
+            if (!isSilent) alert("❌ Gagal menyimpan data ke Database: " + error.message);
         } else {
             if (!isSilent) {
                 alert(`✅ Progress pekerjaan berhasil disimpan ke Cloud!\nWaktu simpan: ${dateString}\n\nData dapat diakses kemudian.`);
@@ -35,7 +35,7 @@ function saveToHistory(isSilent = false) {
 // --- AMBIL DAFTAR RESTORE DARI FIREBASE ---
 function openRestoreModal() {
     let container = document.getElementById("historyListContainer");
-    container.innerHTML = "<div style='text-align:center; padding: 20px; color: #7f8c8d;'>Mengambil data dari database Firebase...</div>";
+    container.innerHTML = "<div style='text-align:center; padding: 20px; color: #7f8c8d;'>Mengambil data dari database Cloud...</div>";
     document.getElementById("modalRestore").style.display = "flex";
 
     // Membaca data dari Firebase node 'history'
@@ -51,7 +51,7 @@ function openRestoreModal() {
         historyData.reverse();
 
         if (historyData.length === 0) {
-            container.innerHTML = "<div style='text-align:center; padding: 25px; color: #7f8c8d; font-style: italic; border: 1px dashed #ccc; border-radius: 5px;'>Belum ada riwayat pekerjaan tersimpan di database Firebase. Klik 'Save History' terlebih dahulu saat bekerja.</div>";
+            container.innerHTML = "<div style='text-align:center; padding: 25px; color: #7f8c8d; font-style: italic; border: 1px dashed #ccc; border-radius: 5px;'>Belum ada riwayat pekerjaan tersimpan di database. Klik 'Save History' terlebih dahulu saat bekerja.</div>";
         } else {
             historyData.forEach((item) => {
                 let div = document.createElement("div");
@@ -114,8 +114,6 @@ function restoreFromFirebase(timestampId) {
         alert(`✅ Pekerjaan versi [${selectedState.dateString}] berhasil dipulihkan dari Cloud!`);
     });
 }
-
-
 
 
 // const STORAGE_KEY = "presensi_pegawai_history";
