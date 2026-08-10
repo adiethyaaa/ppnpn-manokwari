@@ -1,64 +1,55 @@
-// --- PROSES LOGIN FIREBASE ---
 function prosesLoginFirebase(event) {
     event.preventDefault();
-    const user = document.getElementById("loginUsername").value.trim();
-    const pass = document.getElementById("loginPassword").value.trim();
+    
+    const userElem = document.getElementById("loginUsername");
+    const passElem = document.getElementById("loginPassword");
+    const btnElem = document.getElementById("btnLoginSubmit");
+
+    const user = userElem ? userElem.value.trim() : "";
+    const pass = passElem ? passElem.value.trim() : "";
 
     if (!user || !pass) {
         alert("Harap isi username dan password!");
         return;
     }
 
-    db.ref('users/' + user).once('value', (snapshot) => {
-        const userData = snapshot.val();
-        if (userData && userData.password === pass) {
-            sessionStorage.setItem("currentUser", JSON.stringify(userData));
-            window.location.href = "dashboard.html";
-        } else {
-            alert("❌ Login Gagal!\nUsername atau Password salah.");
+    // Ubah teks tombol untuk memberi respon visual
+    if (btnElem) {
+        btnElem.disabled = true;
+        btnElem.innerText = "Memeriksa...";
+    }
+
+    // Set timeout jika koneksi firebase lambat/terkendala
+    const timeoutTimer = setTimeout(() => {
+        if (btnElem) {
+            btnElem.disabled = false;
+            btnElem.innerText = "Log In";
         }
-    });
-}
+        alert("⚠️ Koneksi ke server Firebase lambat atau gagal. Silakan periksa jaringan internet Anda / konfigurasi database.");
+    }, 10000); // 10 detik
 
-// --- CEK SESSION LOGIN & HAK AKSES ---
-function checkAuthSession(requiredRole = null) {
-    const sessionStr = sessionStorage.getItem("currentUser");
-    if (!sessionStr) {
-        window.location.href = "index.html";
-        return null;
-    }
-    const currentUser = JSON.parse(sessionStr);
-    
-    if (requiredRole && currentUser.role !== requiredRole) {
-        alert("⛔ Anda tidak memiliki akses ke halaman ini!");
-        window.location.href = "dashboard.html";
-        return null;
-    }
-    
-    return currentUser;
-}
+    db.ref('users/' + user).once('value')
+        .then((snapshot) => {
+            clearTimeout(timeoutTimer);
+            if (btnElem) {
+                btnElem.disabled = false;
+                btnElem.innerText = "Log In";
+            }
 
-// --- LOGOUT ---
-function logoutUser() {
-    sessionStorage.removeItem("currentUser");
-    window.location.href = "index.html";
-}
-
-// Fitur scroll otomatis untuk tombol logout mengambang
-window.onscroll = function() {
-    let btnScrollTop = document.getElementById("btnScrollTop");
-    let btnLogout = document.getElementById("btnLogoutFloating");
-    let scrollTopVal = document.body.scrollTop || document.documentElement.scrollTop;
-
-    if (btnScrollTop) {
-        btnScrollTop.style.display = (scrollTopVal > 200) ? "block" : "none";
-    }
-    if (btnLogout) {
-        if (scrollTopVal > 50) btnLogout.classList.add("hidden-on-scroll");
-        else btnLogout.classList.remove("hidden-on-scroll");
-    }
-};
-
-function scrollToTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+            const userData = snapshot.val();
+            if (userData && userData.password === pass) {
+                sessionStorage.setItem("currentUser", JSON.stringify(userData));
+                window.location.href = "dashboard.html";
+            } else {
+                alert("❌ Login Gagal!\nUsername atau Password salah.");
+            }
+        })
+        .catch((error) => {
+            clearTimeout(timeoutTimer);
+            if (btnElem) {
+                btnElem.disabled = false;
+                btnElem.innerText = "Log In";
+            }
+            alert("❌ Terjadi Kesalahan Koneksi Firebase:\n" + error.message);
+        });
 }
