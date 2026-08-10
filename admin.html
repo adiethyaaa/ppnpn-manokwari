@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelola Pengguna & Hak Akses - Admin</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2327ae60'/><path d='M30 30h40v40H30z' fill='white'/><path d='M35 20h10v15H35zM55 20h10v15H55z' fill='%23e74c3c'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+
+    <style>
+        .admin-wrapper { max-width: 1000px; margin: 30px auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: #27ae60; }
+        input:checked + .slider:before { transform: translateX(22px); }
+        
+        .perm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; background: #ebf5fb; padding: 15px; border-radius: 6px; margin-top: 10px; border: 1px solid #aed6f1; }
+        .perm-item { display: flex; align-items: center; justify-content: space-between; font-size: 13px; background: white; padding: 8px 12px; border-radius: 5px; border: 1px solid #ddd; font-weight: bold; color: #2c3e50; }
+    </style>
+</head>
+<body>
+    <div class="admin-wrapper">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
+            <h2 style="margin: 0; color: #2c3e50;">⚙️ Kelola Pengguna & Hak Akses Fitur</h2>
+            <div>
+                <a href="dashboard.html" class="btn-excel" style="text-decoration: none; padding: 8px 14px; font-size: 13px; display: inline-block;">⬅ Ke Dashboard</a>
+                <button onclick="logoutUser()" class="btn-pdf" style="margin-left: 5px;">Logout</button>
+            </div>
+        </div>
+
+        <!-- FORM TAMBAH / EDIT USER -->
+        <div class="section-box">
+            <h3 id="formTitle" style="margin-top: 0; color: #2980b9;">Tambah User Baru</h3>
+            <div class="form-group">
+                <input type="text" id="adminUsername" placeholder="Username (misal: operator1)">
+                <input type="text" id="adminPassword" placeholder="Password">
+                <input type="text" id="adminNama" placeholder="Nama Lengkap / Petugas">
+                <select id="adminRole" onchange="togglePermBox()">
+                    <option value="operator">Operator (Custom Akses)</option>
+                    <option value="administrator">Administrator (Full Akses)</option>
+                </select>
+            </div>
+
+            <!-- AREA TOMBOL ON/OFF HAK AKSES -->
+            <div id="boxPermissions" style="margin-top: 15px;">
+                <label style="font-weight: bold; color: #1f618d; font-size: 14px;">Atur Hak Akses Fitur (ON / OFF):</label>
+                <div class="perm-grid">
+                    <div class="perm-item"><span>1. Upload Shift</span> <label class="switch"><input type="checkbox" id="perm_uploadJadwal" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>2. Input Pegawai Manual</span> <label class="switch"><input type="checkbox" id="perm_inputManualPopUp" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>3. Upload Fingerprint</span> <label class="switch"><input type="checkbox" id="perm_uploadFingerprint" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>4. Re-Check Presensi</span> <label class="switch"><input type="checkbox" id="perm_recheckPresensi" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>5. Update Massal Jam</span> <label class="switch"><input type="checkbox" id="perm_updateMassal" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>6. Export Terpilih</span> <label class="switch"><input type="checkbox" id="perm_exportTerpilih" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>7. Hapus Pegawai</span> <label class="switch"><input type="checkbox" id="perm_hapusPegawai"><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>8. Export Excel All</span> <label class="switch"><input type="checkbox" id="perm_exportAllExcel" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>9. Preview PDF All</span> <label class="switch"><input type="checkbox" id="perm_previewPDF" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>10. Save History</span> <label class="switch"><input type="checkbox" id="perm_saveHistory" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>11. Restore History</span> <label class="switch"><input type="checkbox" id="perm_restoreHistory" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>12. Edit Baris Tabel</span> <label class="switch"><input type="checkbox" id="perm_editBarisTabel" checked><span class="slider"></span></label></div>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; text-align: right;">
+                <button class="btn-reset" onclick="resetFormAdmin()">Batal / Reset</button>
+                <button class="btn-excel" onclick="simpanUserFirebase()">💾 Simpan User & Akses</button>
+            </div>
+        </div>
+
+        <!-- DAFTAR USER -->
+        <h3 style="color: #2c3e50;">Daftar Pengguna Aplikasi</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Nama</th>
+                    <th>Role</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="tabelUsersBody"></tbody>
+        </table>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

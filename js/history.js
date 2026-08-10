@@ -116,6 +116,8 @@ function restoreFromFirebase(timestampId) {
 }
 
 
+
+
 // const STORAGE_KEY = "presensi_pegawai_history";
 // const MAX_HISTORY = 5; 
 

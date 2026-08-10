@@ -1,8 +1,13 @@
-index.html (Struktur Utama Halaman)
-
-css/style.css (Style & Tampilan)
-
-js/auth.js (Fungsi Login & Logout)
-js/history.js (Simpan, Restore & Undo History Browser)
-js/manual.js (Form Pop-Up & Input Manual Massal)
-js/app.js (Logika Utama Aplikasi, Kalkulasi & Export)
+presensi-app/
+├── index.html            (Halaman Login Utama)
+├── dashboard.html        (Halaman Utama Aplikasi Presensi)
+├── admin.html            (Halaman Khusus Administrator / Manajemen User)
+├── css/
+│   └── style.css
+└── js/
+    ├── firebase-config.js
+    ├── auth.js           (Proses Login, Session Check, Logout)
+    ├── admin.js          (Fungsi CRUD User & Toggle Akses ON/OFF)
+    ├── app.js            (Aplikasi Utama Presensi + Filter Fitur Berdasarkan Hak Akses)
+    ├── manual.js
+    └── history.js

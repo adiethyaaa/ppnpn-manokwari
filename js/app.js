@@ -1,3 +1,52 @@
+// Cek Login Session saat membuka dashboard
+const activeUser = checkAuthSession();
+
+document.addEventListener("DOMContentLoaded", () => {
+    terapkanHakAksesUI();
+});
+
+function terapkanHakAksesUI() {
+    if (!activeUser) return;
+
+    // Jika Administrator, tampilkan tombol Kelola User di header
+    if (activeUser.role === "administrator") {
+        const topHeader = document.getElementById("topHeader");
+        if (topHeader && !document.getElementById("btnKelolaAdmin")) {
+            let adminBtn = document.createElement("a");
+            adminBtn.id = "btnKelolaAdmin";
+            adminBtn.href = "admin.html";
+            adminBtn.className = "btn-excel";
+            adminBtn.style.cssText = "text-decoration:none; font-size:12px; margin-left:10px; display:inline-block;";
+            adminBtn.innerText = "⚙️ Kelola User & Akses";
+            topHeader.appendChild(adminBtn);
+        }
+        return; 
+    }
+
+    // Jika Operator, sembunyikan tombol sesuai ON/OFF permissions dari Firebase
+    const p = activeUser.permissions || {};
+
+    const elementMap = {
+        uploadJadwal: document.querySelector("button[onclick='prosesExcelJadwal()']"),
+        inputManualPopUp: document.querySelector("button[onclick='bukaModalPegawaiManual()']"),
+        uploadFingerprint: document.querySelector("button[onclick='prosesExcel()']"),
+        recheckPresensi: document.querySelector(".btn-recheck"),
+        updateMassal: document.querySelector("button[onclick='tambahDataManual()']"),
+        exportTerpilih: document.querySelector("button[onclick=\"prosesBatchExport('excel')\"]"),
+        hapusPegawai: document.querySelector(".btn-hapus-pegawai"),
+        exportAllExcel: document.querySelector("button[onclick='exportSemuaExcel()']"),
+        previewPDF: document.querySelector("button[onclick='previewSemuaPDF()']"),
+        saveHistory: document.querySelector(".btn-save-history"),
+        restoreHistory: document.querySelector(".btn-restore-history")
+    };
+
+    Object.keys(elementMap).forEach(key => {
+        if (elementMap[key] && p[key] === false) {
+            elementMap[key].style.display = "none";
+        }
+    });
+}
+
 // GLOBAL STATE APLIKASI
 let globalRekap = {};
 let dataPegawai = {}; 
