@@ -4,34 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kelola Pengguna & Hak Akses - Admin</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2327ae60'/><path d='M30 30h40v40H30z' fill='white'/><path d='M35 20h10v15H35zM55 20h10v15H55z' fill='%23e74c3c'/></svg>">
+    
+    <!-- Link CSS Utama -->
     <link rel="stylesheet" href="css/style.css">
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="js/firebase-config.js"></script>
-
-    <style>
-        .admin-wrapper { max-width: 1000px; margin: 30px auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 22px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
-        input:checked + .slider { background-color: #27ae60; }
-        input:checked + .slider:before { transform: translateX(22px); }
-        
-        .perm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; background: #ebf5fb; padding: 15px; border-radius: 6px; margin-top: 10px; border: 1px solid #aed6f1; }
-        .perm-item { display: flex; align-items: center; justify-content: space-between; font-size: 13px; background: white; padding: 8px 12px; border-radius: 5px; border: 1px solid #ddd; font-weight: bold; color: #2c3e50; }
-    </style>
 </head>
+
 <body>
     <div class="admin-wrapper">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
-            <h2 style="margin: 0; color: #2c3e50;">⚙️ Kelola Pengguna & Hak Akses Fitur</h2>
+        <!-- HEADER ADMIN DENGAN TOMBOL SERASI -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; flex-wrap: wrap; gap: 10px;">
             <div>
-                <a href="dashboard.html" class="btn-excel" style="text-decoration: none; padding: 8px 14px; font-size: 13px; display: inline-block;">⬅ Ke Dashboard</a>
-                <button onclick="logoutUser()" class="btn-pdf" style="margin-left: 5px;">Logout</button>
+                <h2 style="margin: 0; color: #2c3e50; font-size: 20px;">⚙️ Kelola Pengguna & Hak Akses Fitur</h2>
+                <small style="color: #7f8c8d;">Pengaturan Administrator Kantor Regional XIV BKN Manokwari</small>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <a href="dashboard.html" class="btn-dashboard-back">
+                    ⬅ Ke Dashboard
+                </a>
+                <!-- Ubah onclick di sini -->
+                <button onclick="mintaKonfirmasiLogoutAdmin()" class="btn-pdf" style="margin: 0; padding: 8px 14px; font-size: 12px; border-radius: 5px;">
+                    🚪 Logout
+                </button>
             </div>
         </div>
 
@@ -64,6 +62,8 @@
                     <div class="perm-item"><span>10. Save History</span> <label class="switch"><input type="checkbox" id="perm_saveHistory" checked><span class="slider"></span></label></div>
                     <div class="perm-item"><span>11. Restore History</span> <label class="switch"><input type="checkbox" id="perm_restoreHistory" checked><span class="slider"></span></label></div>
                     <div class="perm-item"><span>12. Edit Baris Tabel</span> <label class="switch"><input type="checkbox" id="perm_editBarisTabel" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>13. Save Report Final</span> <label class="switch"><input type="checkbox" id="perm_saveReportFinal" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>14. Tombol Floating History</span> <label class="switch"><input type="checkbox" id="perm_bukaHistoryFloating" checked><span class="slider"></span></label></div>
                 </div>
             </div>
 
@@ -86,6 +86,26 @@
             </thead>
             <tbody id="tabelUsersBody"></tbody>
         </table>
+    </div>
+
+    <!-- MODAL KONFIRMASI LOGOUT ADMIN -->
+    <div class="modal-backdrop" id="modalLogoutAdmin" style="display: none;">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div style="font-size: 42px; margin-bottom: 10px;">🚪</div>
+            <h3 style="margin: 0 0 10px 0; color: #2c3e50;">Konfirmasi Logout</h3>
+            <p style="font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 20px;">
+                Apakah Anda yakin ingin keluar dari halaman Administrator?
+            </p>
+            
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button type="button" class="btn-pdf" id="btnConfirmLogoutAdmin" style="flex: 1; padding: 10px; font-size: 13px; font-weight: bold; margin: 0; border-radius: 5px; background-color: #e74c3c;" onclick="prosesLogoutAdminDenganSpinner()">
+                    Ya, Logout
+                </button>
+                <button type="button" class="btn-reset" style="flex: 1; padding: 10px; font-size: 13px; font-weight: bold; margin: 0; border-radius: 5px;" onclick="tutupModalLogoutAdmin()">
+                    Batal
+                </button>
+            </div>
+        </div>
     </div>
 
     <script src="js/auth.js"></script>

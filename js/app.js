@@ -8,23 +8,58 @@ document.addEventListener("DOMContentLoaded", () => {
 function terapkanHakAksesUI() {
     if (!activeUser) return;
 
-    // Jika Administrator, tampilkan tombol Kelola User di header
+    
+    const btnHistory = document.getElementById("btnHistoryFloating");
+
+    // Kontrol Tampil/Sembunyi Tombol Floating History
+    if (btnHistory) {
+        if (activeUser.role === "administrator" || p.bukaHistoryFloating !== false) {
+            btnHistory.style.display = "flex";
+        } else {
+            btnHistory.style.display = "none";
+        }
+    }
+
+    // Jika Administrator, tampilkan tombol Kelola User MENGAMBANG di sebelah tombol Logout
     if (activeUser.role === "administrator") {
-        const topHeader = document.getElementById("topHeader");
-        if (topHeader && !document.getElementById("btnKelolaAdmin")) {
+        if (!document.getElementById("btnKelolaAdmin")) {
             let adminBtn = document.createElement("a");
             adminBtn.id = "btnKelolaAdmin";
             adminBtn.href = "admin.html";
-            adminBtn.className = "btn-excel";
-            adminBtn.style.cssText = "text-decoration:none; font-size:12px; margin-left:10px; display:inline-block;";
-            adminBtn.innerText = "⚙️ Kelola User & Akses";
-            topHeader.appendChild(adminBtn);
+            adminBtn.className = "btn-admin-floating"; // Menggunakan class CSS khusus floating
+            adminBtn.innerHTML = "⚙️ Kelola User";
+            document.body.appendChild(adminBtn); // Tempelkan langsung ke body agar floating
         }
         return; 
     }
 
     // Jika Operator, sembunyikan tombol sesuai ON/OFF permissions dari Firebase
     const p = activeUser.permissions || {};
+
+    // Buat Tombol Floating Buka History (Kiri Bawah) jika diizinkan
+    if (activeUser.role === "administrator" || p.bukaHistoryFloating !== false) {
+        if (!document.getElementById("btnHistoryFloating")) {
+            let histBtn = document.createElement("button");
+            histBtn.id = "btnHistoryFloating";
+            histBtn.className = "btn-history-floating";
+            histBtn.innerHTML = "🕒 Buka History Laporan";
+            histBtn.onclick = openRestoreModal;
+            document.body.appendChild(histBtn);
+        }
+    }
+
+    // Tombol Administrator Floating
+    if (activeUser.role === "administrator") {
+        if (!document.getElementById("btnKelolaAdmin")) {
+            let adminBtn = document.createElement("a");
+            adminBtn.id = "btnKelolaAdmin";
+            adminBtn.href = "admin.html";
+            adminBtn.className = "btn-admin-floating";
+            adminBtn.innerHTML = "⚙️ Kelola User";
+            document.body.appendChild(adminBtn);
+        }
+        return;
+    }
 
     const elementMap = {
         uploadJadwal: document.querySelector("button[onclick='prosesExcelJadwal()']"),
@@ -37,7 +72,8 @@ function terapkanHakAksesUI() {
         exportAllExcel: document.querySelector("button[onclick='exportSemuaExcel()']"),
         previewPDF: document.querySelector("button[onclick='previewSemuaPDF()']"),
         saveHistory: document.querySelector(".btn-save-history"),
-        restoreHistory: document.querySelector(".btn-restore-history")
+        restoreHistory: document.querySelector(".btn-restore-history"),
+        saveReportFinal: document.getElementById("btnSaveReportFinal")
     };
 
     Object.keys(elementMap).forEach(key => {
@@ -370,9 +406,12 @@ function editBaris(btn, key) {
     
     let tdAksi = tr.cells[11];
     tdAksi.innerHTML = `
-        <button class="btn-simpan" onclick="simpanBarisSingle(this, '${key}')">Simpan</button>
+        
         <button class="btn-hapus" onclick="renderTabel()" style="background:#7f8c8d;">Batal</button>
     `;
+        // <button class="btn-simpan" onclick="simpanBarisSingle(this, '${key}')">Simpan</button>
+   
+    tandaiAdaPerubahanTabel();
 }
 
 function simpanBarisSingle(btn, key) {
@@ -452,6 +491,7 @@ function simpanSemuaPerubahan() {
 
     renderTabel();
     alert("✅ Semua perubahan data di tabel berhasil disimpan!");
+    sembunyikanTombolEdit();
 }
 
 function cekTombolSimpanSemua() {
@@ -603,6 +643,8 @@ function jalankanRecheck() {
 }
 
 function renderTabel() {
+    recheckStatusFinalReport();
+
     const tabelBody = document.getElementById('tabelAbsen').getElementsByTagName('tbody')[0];
     tabelBody.innerHTML = ""; 
 
@@ -799,6 +841,11 @@ function renderTabel() {
     updateAuditBox(); 
     updateFilterKehadiranDropdown();
     cekTombolSimpanSemua();
+
+    // Panggil pengecekan status tombol Save Report Final setiap kali tabel di-render
+    if (typeof recheckStatusFinalReport === "function") {
+    recheckStatusFinalReport();
+}
 }
 
 function filterTabel() {
@@ -1415,7 +1462,7 @@ function downloadPDFSingleEmployee(namaPegawai, data) {
         doc.setFontSize(7.5);
         doc.setFont("helvetica", "italic");
         doc.setTextColor(127, 140, 141); 
-        doc.text("Laporan Presensi Pegawai v.28", 14, doc.internal.pageSize.getHeight() - 5);
+        doc.text("Laporan Presensi Pegawai v.15", 14, doc.internal.pageSize.getHeight() - 5);
         doc.text(`Halaman ${i} dari ${pageCount}`, doc.internal.pageSize.getWidth() - 35, doc.internal.pageSize.getHeight() - 5);
     }
 
@@ -1439,10 +1486,38 @@ function generatePDFMultiPagePreview(listGroupedData) {
         doc.setFontSize(7.5);
         doc.setFont("helvetica", "italic");
         doc.setTextColor(127, 140, 141); 
-        doc.text("Laporan Presensi Pegawai v.28", 14, doc.internal.pageSize.getHeight() - 5);
+        doc.text("Laporan Presensi Pegawai v.15", 14, doc.internal.pageSize.getHeight() - 5);
         doc.text(`Halaman ${i} dari ${pageCount}`, doc.internal.pageSize.getWidth() - 35, doc.internal.pageSize.getHeight() - 5);
     }
 
     const blobPDF = doc.output('bloburl');
     window.open(blobPDF, '_blank');
+}
+
+// ==========================================
+// PENGONTROL TOMBOL SIMPAN & BATAL EDIT TABEL
+// ==========================================
+
+// 1. Memunculkan tombol Simpan & Batal Edit
+function tandaiAdaPerubahanTabel() {
+    const wrapper = document.getElementById("wrapperEditButtons");
+    if (wrapper) {
+        wrapper.style.display = "flex"; // Munculkan 1 baris (Simpan & Batal)
+    }
+}
+
+// 2. Menyembunyikan tombol Simpan & Batal Edit
+function sembunyikanTombolEdit() {
+    const wrapper = document.getElementById("wrapperEditButtons");
+    if (wrapper) {
+        wrapper.style.display = "none"; // Sembunyikan
+    }
+}
+
+// 3. Fungsi saat tombol "✖ Batal" diklik
+function batalSemuaEdit() {
+    if (confirm("Apakah Anda yakin ingin membatalkan seluruh perubahan yang belum disimpan?")) {
+        sembunyikanTombolEdit();
+        renderTabel(); // Render/muat ulang tabel kembali ke data awal sebelum di-edit
+    }
 }

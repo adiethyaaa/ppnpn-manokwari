@@ -40,7 +40,9 @@ function simpanUserFirebase() {
             previewPDF: document.getElementById("perm_previewPDF").checked,
             saveHistory: document.getElementById("perm_saveHistory").checked,
             restoreHistory: document.getElementById("perm_restoreHistory").checked,
-            editBarisTabel: document.getElementById("perm_editBarisTabel").checked
+            editBarisTabel: document.getElementById("perm_editBarisTabel").checked,
+            saveReportFinal: document.getElementById("perm_saveReportFinal").checked,
+            bukaHistoryFloating: document.getElementById("perm_bukaHistoryFloating").checked
         };
     }
 

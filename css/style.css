@@ -18,26 +18,6 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 #main-app { display: none; padding: 20px; }
 .container { max-width: 1350px; margin: auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: relative; }
 
-/* TOMBOL SCROLL TO TOP */
-#btnScrollTop { 
-    display: none; 
-    position: fixed; 
-    bottom: 25px; 
-    right: 25px; 
-    z-index: 1000; 
-    font-size: 13px; 
-    font-weight: bold; 
-    border: none; 
-    outline: none; 
-    background-color: #e74c3c; 
-    color: white; 
-    cursor: pointer; 
-    padding: 10px 16px; 
-    border-radius: 25px; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25); 
-    transition: all 0.3s ease; 
-}
-#btnScrollTop:hover { background-color: #c0392b; transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.3); }
 
 /* HEADER LOGO CONTAINER */
 .app-header-title { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 5px; flex-wrap: wrap; }
@@ -188,7 +168,19 @@ tr.baris-tk { background-color: #f5b7b1 !important; color: #78281f !important; }
 .table-wrapper { max-height: 600px; overflow-y: auto; }
 .app-footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 12px; color: #7f8c8d; font-weight: bold; }
 
-.modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
+.modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; } */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999 !important;
+    justify-content: center;
+    align-items: center;
+}
+
 .modal-content { background: #fff; padding: 25px; border-radius: 8px; width: 90%; max-width: 580px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 85vh; overflow-y: auto; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
 .modal-header h3 { margin: 0; color: #2c3e50; font-size: 16px; }
@@ -202,3 +194,292 @@ tr.baris-tk { background-color: #f5b7b1 !important; color: #78281f !important; }
 .btn-reset-modal:hover { background-color: #d35400; }
 
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px; }
+
+/* TOMBOL KELOLA USER MENGAMBANG (FLOATING) */
+.btn-admin-floating {
+    position: fixed;
+    top: 15px;
+    right: 120px; /* Berada di sebelah kiri tombol logout */
+    z-index: 1001;
+    background-color: #0f03af;
+    color: white;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 12px;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    /* Transisi Mulus seperti tombol logout */
+    transition: opacity 0.4s ease, transform 0.4s ease, background-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 1;
+    visibility: visible;
+}
+
+/* KELAS OTOMATIS SAAT DI-SCROLL (MENYEMBUNYIKAN TOMBOL) */
+.btn-admin-floating.hidden-on-scroll {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-15px);
+    pointer-events: none;
+}
+
+.btn-admin-floating:hover {
+    background-color: #5e5e5e;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+    color: white;
+}
+
+/* --- WIDGET & HALAMAN ADMIN --- */
+.admin-wrapper { 
+    max-width: 1000px; 
+    margin: 30px auto; 
+    background: white; 
+    padding: 25px; 
+    border-radius: 8px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+}
+
+/* TOGGLE SWITCH UNTUK HAK AKSES ON/OFF */
+.switch { 
+    position: relative; 
+    display: inline-block; 
+    width: 44px; 
+    height: 22px; 
+}
+.switch input { 
+    opacity: 0; 
+    width: 0; 
+    height: 0; 
+}
+.slider { 
+    position: absolute; 
+    cursor: pointer; 
+    top: 0; left: 0; right: 0; bottom: 0; 
+    background-color: #ccc; 
+    transition: .3s; 
+    border-radius: 22px; 
+}
+.slider:before { 
+    position: absolute; 
+    content: ""; 
+    height: 16px; 
+    width: 16px; 
+    left: 3px; 
+    bottom: 3px; 
+    background-color: white; 
+    transition: .3s; 
+    border-radius: 50%; 
+}
+input:checked + .slider { 
+    background-color: #27ae60; 
+}
+input:checked + .slider:before { 
+    transform: translateX(22px); 
+}
+
+/* GRID PERMISSIONS ON/OFF */
+.perm-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
+    gap: 12px; 
+    background: #ebf5fb; 
+    padding: 15px; 
+    border-radius: 6px; 
+    margin-top: 10px; 
+    border: 1px solid #aed6f1; 
+}
+.perm-item { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    font-size: 13px; 
+    background: white; 
+    padding: 8px 12px; 
+    border-radius: 5px; 
+    border: 1px solid #ddd; 
+    font-weight: bold; 
+    color: #2c3e50; 
+}
+
+/* TOMBOL KEMBALI KE DASHBOARD DARI HALAMAN ADMIN */
+.btn-dashboard-back {
+    background-color: #6000e6;
+    color: white !important;
+    padding: 8px 14px;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 12px;
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(106, 0, 255, 0.1);
+    transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+.btn-dashboard-back:hover {
+    background-color: #000363;
+    color: white !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-dashboard-back:active {
+    transform: scale(0.98);
+}
+
+
+/* --- ANIMASI SPINNER LOADING LOGIN --- */
+.spinner-login {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #ffffff;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* EFLEK TOMBOL SAAT LOADING (DISABLED) */
+.login-btn:disabled {
+    background-color: #2a2a2a !important;
+    opacity: 0.8;
+    cursor: wait !important;
+}
+
+/* TOMBOL SIMPAN KUNING UTAMA */
+.btn-simpan-semua-kuning {
+    background-color: #321fab;
+    color: #ffffff;
+    border: none;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(243, 156, 18, 0.3);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-simpan-semua-kuning:hover {
+    background-color: #129001;
+    color: white;
+}
+
+/* TOMBOL BATAL EDIT (LEBIH KECIL) */
+.btn-batal-edit {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 12px 15px;
+    font-size: 13px;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.btn-batal-edit:hover {
+    background-color: #030000;
+}
+
+/* TOMBOL SCROLL TO TOP */
+#btnScrollTop { 
+    display: none; 
+    position: fixed; 
+    bottom: 25px; 
+    right: 25px; 
+    z-index: 1000; 
+    font-size: 15px; 
+    font-weight: bold; 
+    border: none; 
+    outline: none; 
+    background-color: #e74c3c; 
+    color: white; 
+    cursor: pointer; 
+    padding: 10px 16px; 
+    border-radius: 25px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25); 
+    transition: all 0.3s ease; 
+}
+#btnScrollTop:hover { background-color: #c0392b; transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.3); }
+
+.btn-history-floating { 
+    display: none; 
+    position: fixed; 
+    bottom: 25px; 
+    left: 25px; 
+    z-index: 1000; 
+    font-size: 13px; 
+    font-weight: bold; 
+    border: none; 
+    outline: none; 
+    background-color: #000000; 
+    color: white; 
+    cursor: pointer; 
+    padding: 10px 16px; 
+    border-radius: 25px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25); 
+    transition: all 0.3s ease; 
+}
+.btn-history-floating { background-color: #4c3030; transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.3); }
+
+
+/* TOMBOL BUKA HISTORY LAPORAN MENGAMBANG (KIRI BAWAH) */
+/* .btn-history-floating {
+    position: fixed !important;
+    bottom: 20px !important;
+    left: 20px !important;
+    z-index: 10001 !important;
+    background-color: #8e44ad !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 18px !important;
+    border-radius: 20px !important;
+    font-weight: bold !important;
+    font-size: 12px !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+    transition: opacity 0.4s ease, transform 0.4s ease, background-color 0.3s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    opacity: 1;
+    visibility: visible;
+}
+
+.btn-history-floating.hidden-on-scroll {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transform: translateY(15px) !important;
+    pointer-events: none !important;
+}
+
+.btn-history-floating:hover {
+    background-color: #7d3c98 !important;
+    color: white !important;
+} */

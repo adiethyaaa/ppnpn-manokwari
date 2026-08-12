@@ -1,4 +1,4 @@
-// --- PROSES LOGIN FIREBASE ---
+// --- PROSES LOGIN FIREBASE DENGAN ANIMASI LOADING ---
 function prosesLoginFirebase(event) {
     event.preventDefault();
     
@@ -14,9 +14,10 @@ function prosesLoginFirebase(event) {
         return;
     }
 
+    // Tampilkan Animasi Loading & Matikan Tombol Sementara
     if (btnElem) {
         btnElem.disabled = true;
-        btnElem.innerText = "Memeriksa...";
+        btnElem.innerHTML = `<span class="spinner-login"></span> Check dulu eee...`;
     }
 
     const timeoutTimer = setTimeout(() => {
@@ -30,18 +31,20 @@ function prosesLoginFirebase(event) {
     db.ref('users/' + user).once('value')
         .then((snapshot) => {
             clearTimeout(timeoutTimer);
-            if (btnElem) {
-                btnElem.disabled = false;
-                btnElem.innerText = "Log In";
-            }
 
             const userData = snapshot.val();
             if (userData && userData.password === pass) {
-                // Simpan data session user aktif
-                sessionStorage.setItem("currentUser", JSON.stringify(userData));
-                // Alihkan ke dashboard
-                window.location.href = "dashboard.html";
+                // Beri sedikit jeda halus (300ms) agar animasi terlihat elegan sebelum berpindah
+                btnElem.innerHTML = `<span class="spinner-login"></span> Mengalihkan...`;
+                setTimeout(() => {
+                    sessionStorage.setItem("currentUser", JSON.stringify(userData));
+                    window.location.href = "dashboard.html";
+                }, 300);
             } else {
+                if (btnElem) {
+                    btnElem.disabled = false;
+                    btnElem.innerText = "Log In";
+                }
                 alert("❌ Login Gagal!\nUsername atau Password salah.");
             }
         })
@@ -92,32 +95,155 @@ function tutupModalLogout() {
     if (modal) modal.style.display = "none";
 }
 
+// --- PROSES LOGOUT DASHBOARD DENGAN ANIMASI SPINNER ---
 function logoutWithSave(shouldSave) {
+    const btnNoSave = document.getElementById("btnLogoutNoSave");
+    const btnWithSave = document.getElementById("btnLogoutWithSave");
+
     if (shouldSave) {
-        if (typeof globalRekap !== "undefined" && Object.keys(globalRekap).length > 0) {
-            saveToHistory(true); 
-        } else {
-            alert("⚠️ Tidak ada data presensi untuk disimpan, melanjutkan logout.");
+        // Tampilkan Spinner di Tombol Simpan & Logout
+        if (btnWithSave) {
+            btnWithSave.disabled = true;
+            btnWithSave.innerHTML = `<span class="spinner-login"></span> Menyimpan...`;
         }
+        if (btnNoSave) btnNoSave.disabled = true;
+
+        setTimeout(() => {
+            if (typeof globalRekap !== "undefined" && Object.keys(globalRekap).length > 0) {
+                saveToHistory(true); 
+            } else {
+                alert("⚠️ Tidak ada data presensi untuk disimpan, melanjutkan logout.");
+            }
+
+            if (btnWithSave) {
+                btnWithSave.innerHTML = `<span class="spinner-login"></span> Mengalihkan...`;
+            }
+
+            // Jeda singkat agar animasi terlihat elegan sebelum berpindah halaman
+            setTimeout(() => {
+                logoutUser();
+            }, 400);
+        }, 300);
+
+    } else {
+        // Tampilkan Spinner di Tombol Logout Tanpa Simpan
+        if (btnNoSave) {
+            btnNoSave.disabled = true;
+            btnNoSave.innerHTML = `<span class="spinner-login"></span> Mengalihkan...`;
+        }
+        if (btnWithSave) btnWithSave.disabled = true;
+
+        setTimeout(() => {
+            logoutUser();
+        }, 400);
     }
-    logoutUser();
 }
 
-// Handler Scroll
+// Handler Scroll Otomatis untuk Tombol Logout & Tombol Kelola User
 window.onscroll = function() {
     let btnScrollTop = document.getElementById("btnScrollTop");
     let btnLogout = document.getElementById("btnLogoutFloating");
+    let btnAdmin = document.getElementById("btnKelolaAdmin");
+    let btnHistory = document.getElementById("btnHistoryFloating");
     let scrollTopVal = document.body.scrollTop || document.documentElement.scrollTop;
 
+    // Tombol Ke Atas
     if (btnScrollTop) {
-        btnScrollTop.style.display = (scrollTopVal > 200) ? "block" : "none";
+        btnScrollTop.style.display = (scrollTopVal > 750) ? "block" : "none";
     }
+    if (btnHistory) {
+        btnHistory.style.display = (scrollTopVal > 750) ? "block" : "none";
+    }
+
+    // Sembunyikan Tombol History  saat Scroll atas > 50px
+    // if (btnHistory) {
+    //     if (scrollTopVal > 50) btnHistory.classList.add("hidden-on-scroll");
+    //     else btnHistory.classList.remove("hidden-on-scroll");
+    // }
+
+    
+    // Sembunyikan Tombol Logout saat Scroll Down > 50px
     if (btnLogout) {
         if (scrollTopVal > 50) btnLogout.classList.add("hidden-on-scroll");
         else btnLogout.classList.remove("hidden-on-scroll");
     }
+
+    // Sembunyikan Tombol Kelola User Admin saat Scroll Down > 50px
+    if (btnAdmin) {
+        if (scrollTopVal > 50) btnAdmin.classList.add("hidden-on-scroll");
+        else btnAdmin.classList.remove("hidden-on-scroll");
+    }
+    
 };
 
 function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Event listener untuk mendeteksi aktivitas pengguna
+if (typeof window !== "undefined") {
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(eventName => {
+        window.addEventListener(eventName, resetInactivityTimer, true);
+    });
+
+    // Jalankan timer pertama kali saat script dimuat
+    resetInactivityTimer();
+}
+
+// ==========================================
+// AUTO LOGOUT KARENA INAKTIVITAS (45 MENIT)
+// ==========================================
+const INACTIVITY_LIMIT = 5 * 60 * 1000; // 45 menit dalam milidetik
+let inactivityTimer;
+
+function resetInactivityTimer() {
+    // Hanya jalankan timer jika user sedang dalam posisi login
+    if (!sessionStorage.getItem("currentUser")) return;
+
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+        alert("⏱️ Sesi Anda telah berakhir karena tidak ada aktivitas selama 5 menit.\nSilakan login kembali.");
+        logoutUser();
+    }, INACTIVITY_LIMIT);
+}
+
+// Event listener untuk mendeteksi aktivitas pengguna
+if (typeof window !== "undefined") {
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(eventName => {
+        window.addEventListener(eventName, resetInactivityTimer, true);
+    });
+
+    // Jalankan timer pertama kali saat script dimuat
+    resetInactivityTimer();
+}
+
+// --- KONFIRMASI & SPINNER LOGOUT ADMIN ---
+function mintaKonfirmasiLogoutAdmin() {
+    const modal = document.getElementById("modalLogoutAdmin");
+    if (modal) {
+        modal.style.display = "flex";
+    } else {
+        // Fallback jika modal tidak ditemukan
+        if (confirm("Apakah Anda yakin ingin keluar dari halaman Administrator?")) {
+            logoutUser();
+        }
+    }
+}
+
+function tutupModalLogoutAdmin() {
+    const modal = document.getElementById("modalLogoutAdmin");
+    if (modal) modal.style.display = "none";
+}
+
+function prosesLogoutAdminDenganSpinner() {
+    const btn = document.getElementById("btnConfirmLogoutAdmin");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-login"></span> Mengalihkan...`;
+    }
+
+    // Jeda 400ms untuk memberikan efek visual animasi spinner berputar
+    setTimeout(() => {
+        logoutUser();
+    }, 400);
 }
