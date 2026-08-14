@@ -81,7 +81,7 @@ button:hover { background-color: #2980b9; }
 .btn-pdf-indigo:hover { background-color: #7d3c98; }
 
 .btn-pdf-landscape { background-color: #474747; }
-.btn-pdf-landscape:hover { background-color: #e74c3c; }
+.btn-pdf-landscape:hover { background-color: #018014; }
 .btn-pdf-landscape-indigo { background-color: #8e44ad; }
 .btn-pdf-landscape-indigo:hover { background-color: #7d3c98; }
 
@@ -367,40 +367,45 @@ input:checked + .slider:before {
     cursor: wait !important;
 }
 
-/* TOMBOL SIMPAN KUNING UTAMA */
+/* WADAH UTAMA TOMBOL EDIT SEMUA HASIL */
+#wrapperEditButtons {
+    box-sizing: border-box;
+}
+
 .btn-simpan-semua-kuning {
-    background-color: #321fab;
+    background-color: #029919;
     color: #ffffff;
     border: none;
-    padding: 12px 20px;
-    font-size: 14px;
+    padding: 10px 16px; /* Sedikit dirapatkan agar lebih elegan */
+    font-size: 13.5px;
     font-weight: bold;
     border-radius: 6px;
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(243, 156, 18, 0.3);
+    box-shadow: 0 4px 10px rgba(2, 153, 25, 0.25);
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    white-space: nowrap;
 }
 
 .btn-simpan-semua-kuning:hover {
-    background-color: #129001;
+    background-color: #030056;
     color: white;
 }
 
-/* TOMBOL BATAL EDIT (LEBIH KECIL) */
+/* TOMBOL BATAL EDIT */
 .btn-batal-edit {
-    background-color: #e74c3c;
+    background-color: #aa1100;
     color: white;
     border: none;
-    padding: 12px 15px;
+    padding: 10px 14px;
     font-size: 13px;
     font-weight: bold;
     border-radius: 6px;
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+    box-shadow: 0 4px 10px rgba(231, 76, 60, 0.25);
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
@@ -412,6 +417,15 @@ input:checked + .slider:before {
 .btn-batal-edit:hover {
     background-color: #030000;
 }
+
+/* PENYESUAIAN PADA TAMPILAN MOBILE / LAYAR KECIL */
+@media screen and (max-width: 768px) {
+    #wrapperEditButtons {
+        width: 100% !important; /* Kembali penuh di layar HP agar tidak sempit */
+        max-width: 100% !important;
+    }
+}
+
 
 /* TOMBOL SCROLL TO TOP */
 #btnScrollTop { 

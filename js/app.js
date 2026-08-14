@@ -413,7 +413,7 @@ function editBaris(btn, key) {
     tdPulang.innerHTML = `<input type="time" class="edit-input" value="${curPulang}">`;
     
     let tdAksi = tr.cells[11];
-    tdAksi.innerHTML = `
+    tdAksi.innerHTML = ` 
         <button class="btn-hapus" onclick="" style="background:#7f8c8d;">Proses..</button>
     `;
 }
@@ -1544,7 +1544,7 @@ function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari) {
         let startY = 8;
         const pageWidth = doc.internal.pageSize.getWidth();
 
-        // HEADER LAPORAN
+        // HEADER LAPORAN HARIAN
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.setTextColor(44, 62, 80);
@@ -1553,7 +1553,10 @@ function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari) {
         doc.text("KANTOR REGIONAL XIV BKN MANOKWARI", pageWidth / 2, startY, { align: "center" });
         startY += 4;
         doc.setFontSize(8.5);
-        doc.text("PERIODE: JULI 2026", pageWidth / 2, startY, { align: "center" });
+        
+        // 💡 DIBUAT OTOMATIS BERDASARKAN BULAN/TAHUN AKTIF
+        const teksPeriodeAktif = (typeof namaBulanTahun !== "undefined" && namaBulanTahun) ? namaBulanTahun.toUpperCase() : "--";
+        doc.text(`PERIODE: ${teksPeriodeAktif}`, pageWidth / 2, startY, { align: "center" });
         startY += 5;
 
         // HEADER TABEL HARIAN
@@ -1717,7 +1720,7 @@ function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari) {
         doc.setFontSize(6.5);
         doc.setFont("helvetica", "italic");
         doc.setTextColor(127, 140, 141);
-        doc.text("Laporan Presensi Pegawai v.28 - Kanreg XIV BKN Manokwari", 6, doc.internal.pageSize.getHeight() - 3.5);
+        doc.text("Laporan Presensi Pegawai v.15 - Kanreg XIV BKN Manokwari", 6, doc.internal.pageSize.getHeight() - 3.5);
         doc.text(`Halaman ${i} dari ${totalPages}`, doc.internal.pageSize.getWidth() - 25, doc.internal.pageSize.getHeight() - 3.5);
     }
 
@@ -1734,7 +1737,7 @@ function renderTabelSambunganHalaman3(doc, groupedByRole, sortedRoleKeys, totalH
         let startY = 8;
         const pageWidth = doc.internal.pageSize.getWidth();
 
-        // HEADER
+        // HEADER TABEL SAMBUNGAN
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.setTextColor(44, 62, 80);
@@ -1743,7 +1746,10 @@ function renderTabelSambunganHalaman3(doc, groupedByRole, sortedRoleKeys, totalH
         doc.text("KANTOR REGIONAL XIV BKN MANOKWARI", pageWidth / 2, startY, { align: "center" });
         startY += 4;
         doc.setFontSize(8.5);
-        doc.text("PERIODE: JULI 2026", pageWidth / 2, startY, { align: "center" });
+        
+        // 💡 DIBUAT OTOMATIS BERDASARKAN BULAN/TAHUN AKTIF
+        const teksPeriodeAktif = (typeof namaBulanTahun !== "undefined" && namaBulanTahun) ? namaBulanTahun.toUpperCase() : "--";
+        doc.text(`PERIODE: ${teksPeriodeAktif}`, pageWidth / 2, startY, { align: "center" });
         startY += 6;
 
         // HEADER TABEL (DENGAN 1 KOLOM PEMISAH BERWARNA DI KOLOM INDEX 8)
@@ -1959,44 +1965,35 @@ function batalSemuaEdit() {
 // EXPORT PREVIEW PDF LANDSCAPE (FIXED)
 // ==========================================
 
+// Variable temporary untuk menampung data pengelompokan role saat modal dibuka
+let tempGroupedByRole = {};
+
+// =========================================================
+// 1. FUNGSI UTAMA: MEMBUKA MODAL PILIH KATEGORI PDF LANDSCAPE
+// =========================================================
 window.exportPreviewPDFLandscape = function() {
     try {
         if (typeof globalRekap === "undefined" || !globalRekap || Object.keys(globalRekap).length === 0) {
-            alert("⚠️ Data presensi (globalRekap) masih kosong!");
+            alert("⚠️ Data presensi Rekap Final masih kosong!");
             return;
         }
 
-        const yakin = confirm("Apakah Anda yakin ingin membuka Preview PDF Rekap Kehadiran Pegawai (Landscape)?");
-        if (!yakin) return;
-
-        if (!window.jspdf || !window.jspdf.jsPDF) {
-            alert("❌ Library jsPDF / AutoTable belum terpasang di dashboard.html!");
-            return;
-        }
-
-        // =========================================================
-        // 1. GROUPING SUPER KETAT BERDASARKAN NAMA PEGAWAI (ANTI-DUPLIKAT)
-        // =========================================================
+        // --- A. PROSES SANITASI & GROUPING PER ROLE ---
         const pegawaimap = {};
 
         Object.keys(globalRekap).forEach(key => {
             const item = globalRekap[key];
             if (!item) return;
 
-            // Tarik Nama Lengkap murni
             let rawNama = item.namaPegawai || item.namaLengkap || item.nama || "";
             if (!rawNama && key.includes('_')) {
-                // Fallback jika key berbentuk "140011_2026-07-01"
                 rawNama = key.split('_')[0];
             }
             
             let namaClean = String(rawNama).trim();
             if (!namaClean || namaClean === "-") return;
 
-            // Kunci utama pengelompokan MENGGUNAKAN NAMA LENGKAP (Upper) agar tidak mungkin terduplikasi
             let uniqueKey = namaClean.toUpperCase();
-
-            // Tarik ID PPNPN
             let idPpnP = String(item.idPpnPN || item.idPegawai || item.id || "").trim();
             let role = String(item.role || item.kategori || item.jabatan || "STAFF").toUpperCase().trim();
 
@@ -2008,13 +2005,11 @@ window.exportPreviewPDFLandscape = function() {
                     presensiHarian: {}
                 };
             } else {
-                // Jika ID PPNPN sebelumnya masih "-" tapi sekarang ada isinya, perbarui ID-nya
                 if ((!pegawaimap[uniqueKey].idPpnPN || pegawaimap[uniqueKey].idPpnPN === "-") && idPpnP) {
                     pegawaimap[uniqueKey].idPpnPN = idPpnP;
                 }
             }
 
-            // Ekstrak Tanggal (1 s.d. 31)
             let rawTgl = item.tanggal || item.tgl || (key.includes('_') ? key.split('_')[1] : null);
             if (rawTgl) {
                 let tglAngka = parseInt(String(rawTgl).split('-').pop(), 10);
@@ -2024,38 +2019,137 @@ window.exportPreviewPDFLandscape = function() {
             }
         });
 
-        // =========================================================
-        // 2. DEDUPLIKASI KETAT & KELOMPOKKAN PER ROLE
-        // =========================================================
+        // Grouping per role
         const listPegawaiAll = Object.values(pegawaimap);
-        const groupedByRole = {};
+        tempGroupedByRole = {};
 
         listPegawaiAll.forEach(p => {
             let r = p.role || "STAFF";
-            if (!groupedByRole[r]) groupedByRole[r] = [];
+            if (!tempGroupedByRole[r]) tempGroupedByRole[r] = [];
 
-            // Pengecekan mutlak: Cegah nama yang sama masuk 2 kali dalam 1 role
-            const isExist = groupedByRole[r].some(existing => 
+            const isExist = tempGroupedByRole[r].some(existing => 
                 existing.namaLengkap.toUpperCase() === p.namaLengkap.toUpperCase()
             );
 
             if (!isExist) {
-                groupedByRole[r].push(p);
+                tempGroupedByRole[r].push(p);
             }
         });
 
-        // Urutkan Nama Pegawai Ascending (A - Z) di dalam tiap Role
-        Object.keys(groupedByRole).forEach(r => {
-            groupedByRole[r].sort((a, b) => a.namaLengkap.localeCompare(b.namaLengkap));
+        // Urutkan Nama A-Z per role
+        Object.keys(tempGroupedByRole).forEach(r => {
+            tempGroupedByRole[r].sort((a, b) => a.namaLengkap.localeCompare(b.namaLengkap));
         });
 
-        const sortedRoleKeys = Object.keys(groupedByRole).sort();
-        const totalHari = 31; // Jumlah hari dalam bulan berjalan
+        const availableRoles = Object.keys(tempGroupedByRole).sort();
+        if (availableRoles.length === 0) {
+            alert("⚠️ Tidak ada kategori pegawai yang ditemukan!");
+            return;
+        }
 
-        generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari);
+        // --- B. RENDER PILIHAN CHECKBOX DI MODAL (TABEL LAYOUT ANTI-MENIMPA) ---
+        const container = document.getElementById("containerListKategoriPdf");
+        container.innerHTML = "";
+
+        availableRoles.forEach(roleName => {
+            const countPegawai = tempGroupedByRole[roleName].length;
+            
+            const card = document.createElement("div");
+            card.style.cssText = "background: #ffffff; border: 1px solid #e0e6ed; border-radius: 8px; padding: 10px 14px; transition: all 0.2s ease;";
+            
+            card.onmouseover = () => { card.style.borderColor = '#3498db'; card.style.background = '#f7fbfe'; };
+            card.onmouseout = () => { card.style.borderColor = '#e0e6ed'; card.style.background = '#ffffff'; };
+
+            card.innerHTML = `
+                <label style="cursor: pointer; display: block; width: 100%; margin: 0; padding: 0;">
+                    <table style="width: 100%; border-collapse: collapse; border: none; background: transparent;">
+                        <tr>
+                            <td style="width: 28px; vertical-align: middle; text-align: left; padding: 0; border: none;">
+                                <input type="checkbox" class="cb-kategori-pdf" value="${roleName}" checked style="width: 18px; height: 18px; accent-color: #27ae60; cursor: pointer; display: block; margin: 0;" onchange="updateCheckAllState()">
+                            </td>
+                            <td style="vertical-align: middle; text-align: left; padding-left: 8px; border: none;">
+                                <span style="font-weight: 600; font-size: 14px; color: #2c3e50; display: inline-block;">${roleName}</span>
+                            </td>
+                            <td style="width: 100px; vertical-align: middle; text-align: right; padding: 0; border: none;">
+                                <span style="background: #eef2f7; color: #4a6572; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px; display: inline-block;">
+                                    ${countPegawai} Pegawai
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </label>
+            `;
+            container.appendChild(card);
+        });
+
+        document.getElementById("checkAllKategoriPdf").checked = true;
+
+        // Tampilkan Modal
+        document.getElementById("modalPilihKategori").style.display = "flex";
 
     } catch (err) {
-        console.error("Error pada Export PDF:", err);
-        alert("❌ Terjadi Error saat membuat PDF:\n" + err.message);
+        console.error("Error pada Buka Modal PDF Landscape:", err);
+        alert("❌ Terjadi Error:\n" + err.message);
     }
 };
+
+// =========================================================
+// 2. HELPER KONTROL CHECKBOX MODAL
+// =========================================================
+function toggleCheckAllKategoriPdf(isChecked) {
+    document.querySelectorAll(".cb-kategori-pdf").forEach(cb => {
+        cb.checked = isChecked;
+    });
+}
+
+function updateCheckAllState() {
+    const all = document.querySelectorAll(".cb-kategori-pdf");
+    const checked = document.querySelectorAll(".cb-kategori-pdf:checked");
+    const checkAll = document.getElementById("checkAllKategoriPdf");
+    if (checkAll) {
+        checkAll.checked = (all.length === checked.length);
+    }
+}
+
+function tutupModalKategoriPdf() {
+    document.getElementById("modalPilihKategori").style.display = "none";
+}
+
+// =========================================================
+// 3. PROSES EXPORT SETELAH KATEGORI DIPILIH & KONFIRMASI
+// =========================================================
+function prosesExportPdfLandscapeDenganPilihan() {
+    const checkedBoxes = document.querySelectorAll(".cb-kategori-pdf:checked");
+    if (checkedBoxes.length === 0) {
+        alert("⚠️ Pilih minimal 1 kategori pegawai yang ingin diexport!");
+        return;
+    }
+
+    // Ambil list role terpilih
+    const selectedRoleKeys = Array.from(checkedBoxes).map(cb => cb.value).sort();
+
+    // Saring groupedByRole hanya untuk role terpilih
+    const filteredGroupedByRole = {};
+    selectedRoleKeys.forEach(r => {
+        filteredGroupedByRole[r] = tempGroupedByRole[r];
+    });
+
+    // --- KONFIRMASI AKHIR SEBELUM TAMPIL FILE ---
+    const daftarRoleStr = selectedRoleKeys.join(", ");
+    const yakin = confirm(`Apakah Anda yakin ingin membuka Preview PDF Rekap Kehadiran Pegawai (Landscape) untuk kategori terpilih:\n\n👉 [ ${daftarRoleStr} ] ?`);
+    
+    if (!yakin) return;
+
+    // Tutup Modal
+    tutupModalKategoriPdf();
+
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert("❌ Library jsPDF / AutoTable belum terpasang!");
+        return;
+    }
+
+    const totalHari = 31; // Jumlah hari dalam bulan berjalan
+
+    // Jalankan Generator PDF
+    generatePDFLandscapeChunked(filteredGroupedByRole, selectedRoleKeys, totalHari);
+}
