@@ -25,7 +25,9 @@ function terapkanHakAksesUI() {
         if (!document.getElementById("btnKelolaAdmin")) {
             let adminBtn = document.createElement("a");
             adminBtn.id = "btnKelolaAdmin";
+            // adminBtn.href = "admin";
             adminBtn.href = "admin.html";
+            //link web html
             adminBtn.className = "btn-admin-floating"; // Menggunakan class CSS khusus floating
             adminBtn.innerHTML = "⚙️ Kelola User";
             document.body.appendChild(adminBtn); // Tempelkan langsung ke body agar floating
@@ -53,7 +55,9 @@ function terapkanHakAksesUI() {
         if (!document.getElementById("btnKelolaAdmin")) {
             let adminBtn = document.createElement("a");
             adminBtn.id = "btnKelolaAdmin";
+            // adminBtn.href = "admin";
             adminBtn.href = "admin.html";
+            //link web html
             adminBtn.className = "btn-admin-floating";
             adminBtn.innerHTML = "⚙️ Kelola User";
             document.body.appendChild(adminBtn);
@@ -365,10 +369,14 @@ function onShiftChangeInEdit(selectElem) {
     }
 }
 
+// 3. FUNGSI EDIT BARIS TABEL (FIXED)
 function editBaris(btn, key) {
     let tr = btn.closest("tr");
     tr.classList.add("sedang-diedit");
-    document.getElementById('btnSimpanSemua').style.display = 'inline-block';
+    tr.setAttribute("data-key", key); // Simpan key di elemen TR
+    
+    // Panggil penampil tombol simpan
+    tandaiAdaPerubahanTabel();
 
     let tdShift = tr.cells[3];
     let tdKehadiran = tr.cells[6];
@@ -406,12 +414,8 @@ function editBaris(btn, key) {
     
     let tdAksi = tr.cells[11];
     tdAksi.innerHTML = `
-        
-        <button class="btn-hapus" onclick="renderTabel()" style="background:#7f8c8d;">Batal</button>
+        <button class="btn-hapus" onclick="" style="background:#7f8c8d;">Proses..</button>
     `;
-        // <button class="btn-simpan" onclick="simpanBarisSingle(this, '${key}')">Simpan</button>
-   
-    tandaiAdaPerubahanTabel();
 }
 
 function simpanBarisSingle(btn, key) {
@@ -453,37 +457,36 @@ function simpanSemuaPerubahan() {
         alert("Tidak ada baris yang sedang diedit!");
         return;
     }
-    barisEdit.forEach(tr => {
-        let btnSimpan = tr.querySelector(".btn-simpan");
-        if (btnSimpan) {
-            let keyMatch = btnSimpan.getAttribute("onclick").match(/'([^']+)'/);
-            if (keyMatch) {
-                let key = keyMatch[1];
-                let inputs = tr.querySelectorAll(".edit-input");
-                let valMasuk = inputs[0].value;
-                let valPulang = inputs[1].value;
-                let selectShift = tr.querySelector(".edit-shift");
-                let selectKehadiran = tr.querySelector(".edit-kehadiran");
-                
-                let newShift = selectShift ? selectShift.value : "OFF";
-                let newStatus = selectKehadiran ? selectKehadiran.value : null;
 
-                if (globalRekap[key] !== undefined) {
-                    if (newShift === "OFF") {
-                        globalRekap[key].shiftTipe = "OFF";
-                        globalRekap[key].waktuMasuk = null;
-                        globalRekap[key].waktuPulang = null;
-                        globalRekap[key].manualStatus = null;
-                    } else {
-                        globalRekap[key].shiftTipe = newShift;
-                        globalRekap[key].waktuMasuk = valMasuk ? valMasuk + ":00" : null;
-                        globalRekap[key].waktuPulang = valPulang ? valPulang + ":00" : null;
-                        if (newStatus && newStatus !== "") {
-                            globalRekap[key].manualStatus = newStatus;
-                        } else {
-                            globalRekap[key].manualStatus = null;
-                        }
-                    }
+    barisEdit.forEach(tr => {
+        // 💡 Ambil key langsung dari atribut data-key pada TR
+        let key = tr.getAttribute("data-key");
+        if (!key) return;
+
+        let inputs = tr.querySelectorAll(".edit-input");
+        let valMasuk = inputs[0] ? inputs[0].value : "";
+        let valPulang = inputs[1] ? inputs[1].value : "";
+        let selectShift = tr.querySelector(".edit-shift");
+        let selectKehadiran = tr.querySelector(".edit-kehadiran");
+        
+        let newShift = selectShift ? selectShift.value : "OFF";
+        let newStatus = selectKehadiran ? selectKehadiran.value : null;
+
+        if (globalRekap[key] !== undefined) {
+            if (newShift === "OFF") {
+                globalRekap[key].shiftTipe = "OFF";
+                globalRekap[key].waktuMasuk = null;
+                globalRekap[key].waktuPulang = null;
+                globalRekap[key].manualStatus = null;
+            } else {
+                globalRekap[key].shiftTipe = newShift;
+                globalRekap[key].waktuMasuk = valMasuk ? valMasuk + ":00" : null;
+                globalRekap[key].waktuPulang = valPulang ? valPulang + ":00" : null;
+                
+                if (newStatus && newStatus !== "") {
+                    globalRekap[key].manualStatus = newStatus;
+                } else {
+                    globalRekap[key].manualStatus = null;
                 }
             }
         }
@@ -1493,24 +1496,453 @@ function generatePDFMultiPagePreview(listGroupedData) {
     const blobPDF = doc.output('bloburl');
     window.open(blobPDF, '_blank');
 }
+//^ FIXED. EDIT FINAL.
+
 
 // ==========================================
-// PENGONTROL TOMBOL SIMPAN & BATAL EDIT TABEL
+// EXPORT PREVIEW PDF LANDSCAPE (3 BARIS PER PEGAWAI & CHUNKING TANGGAL), LAPORAN AKHIR
 // ==========================================
 
-// 1. Memunculkan tombol Simpan & Batal Edit
-function tandaiAdaPerubahanTabel() {
-    const wrapper = document.getElementById("wrapperEditButtons");
-    if (wrapper) {
-        wrapper.style.display = "flex"; // Munculkan 1 baris (Simpan & Batal)
+function exportPreviewPDFLandscape() {
+    if (typeof globalRekap === "undefined" || Object.keys(globalRekap).length === 0) {
+        alert("⚠️ Tidak ada data presensi yang dapat diexport!");
+        return;
+    }
+
+    const yakin = confirm("Apakah Anda yakin ingin membuka Preview PDF Rekap Kehadiran Pegawai (Landscape)?");
+    if (!yakin) return;
+
+    // Persiapkan Data Pegawai & Jumlah Hari dalam Bulan (misal 31 hari untuk Juli 2026)
+    const totalHari = 31; // Bisa dibuat dinamis sesuai bulan berjalan
+    const listNamaPegawai = Object.keys(globalRekap);
+
+    generatePDFLandscapeChunked(listNamaPegawai, globalRekap, totalHari);
+}
+
+//=============
+//LANDSCAPE CHUNCKED SAMPAI BLOB
+//=============
+
+function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari) {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert("❌ Library jsPDF / AutoTable belum dimuat!");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const namaHariList = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+
+    const chunkRanges = [
+        { start: 1, end: 16 },        // Halaman 1: Tanggal 1 s.d. 16
+        { start: 17, end: totalHari }  // Halaman 2: Tanggal 17 s.d. 31
+    ];
+
+    chunkRanges.forEach((chunk, chunkIndex) => {
+        if (chunkIndex > 0) doc.addPage();
+
+        let startY = 8;
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        // HEADER LAPORAN
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(44, 62, 80);
+        doc.text("REKAP KEHADIRAN PEGAWAI", pageWidth / 2, startY, { align: "center" });
+        startY += 4;
+        doc.text("KANTOR REGIONAL XIV BKN MANOKWARI", pageWidth / 2, startY, { align: "center" });
+        startY += 4;
+        doc.setFontSize(8.5);
+        doc.text("PERIODE: JULI 2026", pageWidth / 2, startY, { align: "center" });
+        startY += 5;
+
+        // HEADER TABEL HARIAN
+        const headRow1 = [
+            { content: "No", rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+            { content: "ID PPNPN", rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
+            { content: "Nama Lengkap", rowSpan: 2, styles: { halign: 'center', valign: 'middle' } }
+        ];
+        const headRow2 = [];
+
+        for (let tgl = chunk.start; tgl <= chunk.end; tgl++) {
+            headRow1.push({ content: `${tgl} JULI`, colSpan: 2, styles: { halign: 'center', valign: 'middle' } });
+            let dt = new Date(2026, 6, tgl);
+            headRow2.push({ content: namaHariList[dt.getDay()], colSpan: 2, styles: { halign: 'center' } });
+        }
+
+        const bodyRows = [];
+        let globalNo = 1;
+
+        sortedRoleKeys.forEach(roleName => {
+            const listPegawaiRole = groupedByRole[roleName];
+            if (!listPegawaiRole || listPegawaiRole.length === 0) return;
+
+            // Baris Header Kategori Role
+            const totalCols = 3 + ((chunk.end - chunk.start + 1) * 2);
+            bodyRows.push([{
+                content: `KATEGORI: ${roleName}`,
+                colSpan: totalCols,
+                styles: { fillColor: [52, 73, 94], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.5, halign: 'left', cellPadding: 1 }
+            }]);
+
+            listPegawaiRole.forEach(pegawai => {
+                const noStr = String(globalNo++);
+                const idStr = String(pegawai.idPpnPN);
+                const namaStr = pegawai.namaLengkap;
+
+                // Baris 1: Kolom Identitas Menggunakan rowSpan: 3 Murni (Tanpa \n\n)
+                const row1 = [
+                    { content: noStr, rowSpan: 3, styles: { halign: 'center', valign: 'middle' } },
+                    { content: idStr, rowSpan: 3, styles: { halign: 'center', valign: 'middle' } },
+                    { content: namaStr, rowSpan: 3, styles: { halign: 'left', valign: 'middle' } }
+                ];
+
+                // Baris 2 & 3: TIDAK PERLU SEL KOSONG UNTUK KOLOM 0, 1, 2
+                const row2 = [];
+                const row3 = [];
+
+                // Isi Data Tanggal Harian
+                for (let tgl = chunk.start; tgl <= chunk.end; tgl++) {
+                    let itemHari = pegawai.presensiHarian[tgl];
+                    let shift = "P", masuk = "--", pulang = "--", statusText = "TK";
+                    let bgStatus = [255, 235, 238];
+
+                    if (itemHari) {
+                        shift = itemHari.shift || itemHari.keteranganShift || itemHari.shiftTipe || itemHari.tipeShift || "P";
+                        let rawMasuk = itemHari.jamMasuk || itemHari.waktuMasuk || itemHari.masuk || itemHari.jam_masuk;
+                        masuk = (rawMasuk && rawMasuk !== "-" && rawMasuk !== "--") ? String(rawMasuk).substring(0, 5) : "--";
+                        let rawPulang = itemHari.jamPulang || itemHari.waktuPulang || itemHari.pulang || itemHari.jam_pulang;
+                        pulang = (rawPulang && rawPulang !== "-" && rawPulang !== "--") ? String(rawPulang).substring(0, 5) : "--";
+
+                        let recordForStatus = {
+                            waktuMasuk: masuk !== "--" ? masuk : null,
+                            waktuPulang: pulang !== "--" ? pulang : null,
+                            shiftTipe: shift,
+                            role: pegawai.role,
+                            manualStatus: ["Cuti", "Sakit", "Dinas Luar", "Libur", "Off", "LJ", "CS", "CT", "DL"].includes(itemHari.keterangan || itemHari.status) ? (itemHari.keterangan || itemHari.status) : null
+                        };
+
+                        if (typeof getStatusKehadiran === "function") {
+                            statusText = getStatusKehadiran(recordForStatus);
+                        } else {
+                            statusText = (masuk !== "--" || pulang !== "--") ? "HN" : "TK";
+                        }
+                    }
+
+                    if (["LJ", "Libur", "Off", "OFF"].includes(statusText) || shift === "OFF" || shift === "Off") {
+                        bgStatus = [191, 191, 191]; // Abu 25%
+                        if (statusText === "TK") statusText = "LJ";
+                    } else if (statusText === "HN") {
+                        bgStatus = [255, 255, 255];
+                    } else if (statusText === "TK") {
+                        bgStatus = [255, 235, 238];
+                    } else {
+                        bgStatus = [254, 249, 231];
+                    }
+
+                    let bgCellShift = bgStatus;
+
+                    row1.push({ content: statusText, colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: bgStatus } });
+                    row2.push({ content: shift, styles: { halign: 'center', fillColor: bgCellShift } });
+                    row2.push({ content: masuk, styles: { halign: 'center', fillColor: bgCellShift } });
+                    row3.push({ content: shift, styles: { halign: 'center', fillColor: bgCellShift } });
+                    row3.push({ content: pulang, styles: { halign: 'center', fillColor: bgCellShift } });
+                }
+
+                row3.isEndPegawai = true;
+
+                bodyRows.push(row1);
+                bodyRows.push(row2);
+                bodyRows.push(row3);
+            });
+        });
+
+        // RENDER AUTOTABLE HALAMAN 1 & 2 DENGAN SERAGAM DITINGGI BARIS
+        doc.autoTable({
+            startY: startY,
+            head: [headRow1, headRow2],
+            body: bodyRows,
+            theme: 'grid',
+            styles: { 
+                fontSize: 5.2, 
+                cellPadding: 0.5,    // Padding seragam & compact
+                minCellHeight: 3.2,  // Menjaga tinggi minimum setiap baris seragam
+                lineColor: [44, 62, 80], // Garis Hitam Pekat
+                lineWidth: 0.15 
+            },
+            headStyles: { 
+                fillColor: [44, 62, 80], 
+                textColor: [255, 255, 255], 
+                fontStyle: 'bold', 
+                fontSize: 5.8, 
+                lineColor: [44, 62, 80], 
+                lineWidth: 0.25 
+            },
+            columnStyles: { 
+                0: { cellWidth: 5.5, halign: 'center' }, 
+                1: { cellWidth: 11, halign: 'center' }, 
+                2: { cellWidth: 24, halign: 'left' } 
+            },
+            margin: { left: 6, right: 6, top: 6, bottom: 8 },
+
+            willDrawCell: function(data) {
+                if (data.section === 'body') {
+                    const rawRowData = bodyRows[data.row.index];
+                    data.cell.styles.lineColor = [0, 0, 0];
+
+                    const isKategoriRow = data.row.cells[0] && data.row.cells[0].colSpan > 1;
+                    if (isKategoriRow) return;
+
+                    // TEBAL GARIS BOTTOM DENGAN RENDER HITAM UNIFORM
+                    // Ubah nilai Bottom supaya jarak 2 garis double bottom lebih rapat
+                    if (data.column.index <= 2) {
+                        data.cell.styles.lineWidth = { bottom: 0.35, top: 0.15, left: 0.15, right: 0.15 };
+                    } else if (rawRowData && rawRowData.isEndPegawai) {
+                        data.cell.styles.lineWidth = { bottom: 0.35, top: 0.15, left: 0.15, right: 0.15 };
+                    } else {
+                        data.cell.styles.lineWidth = 0.15;
+                    }
+                }
+            }
+        });
+    });
+
+    // PANGGIL TABEL SAMBUNGAN HALAMAN 3
+    renderTabelSambunganHalaman3(doc, groupedByRole, sortedRoleKeys, totalHari);
+
+    // FOOTER HALAMAN
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(6.5);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(127, 140, 141);
+        doc.text("Laporan Presensi Pegawai v.28 - Kanreg XIV BKN Manokwari", 6, doc.internal.pageSize.getHeight() - 3.5);
+        doc.text(`Halaman ${i} dari ${totalPages}`, doc.internal.pageSize.getWidth() - 25, doc.internal.pageSize.getHeight() - 3.5);
+    }
+
+    const blobPDF = doc.output('bloburl');
+    window.open(blobPDF, '_blank');
+}
+
+// =========================================================
+// FUNGSI RENDER TABEL SAMBUNGAN REKAPITULASI (HALAMAN 3)
+// =========================================================
+function renderTabelSambunganHalaman3(doc, groupedByRole, sortedRoleKeys, totalHari) {
+    try {
+        doc.addPage();
+        let startY = 8;
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        // HEADER
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(44, 62, 80);
+        doc.text("REKAPITULASI TOTAL KEHADIRAN PEGAWAI", pageWidth / 2, startY, { align: "center" });
+        startY += 4;
+        doc.text("KANTOR REGIONAL XIV BKN MANOKWARI", pageWidth / 2, startY, { align: "center" });
+        startY += 4;
+        doc.setFontSize(8.5);
+        doc.text("PERIODE: JULI 2026", pageWidth / 2, startY, { align: "center" });
+        startY += 6;
+
+        // HEADER TABEL (DENGAN 1 KOLOM PEMISAH BERWARNA DI KOLOM INDEX 8)
+        const headCols = [
+            [
+                { content: "No", styles: { halign: 'center', valign: 'middle' } },
+                { content: "ID PPNPN", styles: { halign: 'center', valign: 'middle' } },
+                { content: "Nama Lengkap", styles: { halign: 'center', valign: 'middle' } },
+                { content: "JUMLAH HARI KERJA", styles: { halign: 'center', valign: 'middle' } },
+                { content: "CS", styles: { halign: 'center', valign: 'middle' } },
+                { content: "CT", styles: { halign: 'center', valign: 'middle' } },
+                { content: "DL", styles: { halign: 'center', valign: 'middle' } },
+                { content: "TK", styles: { halign: 'center', valign: 'middle' } },
+                { content: "", styles: { fillColor: [52, 73, 94] } }, // Kolom Pemisah Berwarna Antara TK dan HN
+                { content: "HN", styles: { halign: 'center', valign: 'middle' } },
+                { content: "TM1", styles: { halign: 'center', valign: 'middle' } },
+                { content: "TM2", styles: { halign: 'center', valign: 'middle' } },
+                { content: "TM3", styles: { halign: 'center', valign: 'middle' } },
+                { content: "PC1", styles: { halign: 'center', valign: 'middle' } },
+                { content: "PC2", styles: { halign: 'center', valign: 'middle' } },
+                { content: "PC3", styles: { halign: 'center', valign: 'middle' } },
+                { content: "JUMLAH KEHADIRAN", styles: { halign: 'center', valign: 'middle' } }
+            ]
+        ];
+
+        const bodyRows = [];
+        let globalNo = 1;
+
+        sortedRoleKeys.forEach(roleName => {
+            const listPegawaiRole = groupedByRole[roleName];
+            if (!listPegawaiRole || listPegawaiRole.length === 0) return;
+
+            // Baris Kategori
+            bodyRows.push([
+                {
+                    content: `KATEGORI: ${roleName}`,
+                    colSpan: 17,
+                    styles: { fillColor: [52, 73, 94], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.5, halign: 'left', cellPadding: 1 }
+                }
+            ]);
+
+            listPegawaiRole.forEach(pegawai => {
+                let cs = 0, ct = 0, dl = 0, tk = 0, hn = 0;
+                let tm1 = 0, tm2 = 0, tm3 = 0, pc1 = 0, pc2 = 0, pc3 = 0;
+                let hariKerja = 0;
+
+                for (let tgl = 1; tgl <= totalHari; tgl++) {
+                    let itemHari = pegawai.presensiHarian[tgl];
+                    if (!itemHari) {
+                        tk++;
+                        continue;
+                    }
+
+                    let shift = itemHari.shift || itemHari.keteranganShift || itemHari.shiftTipe || "P";
+                    let rawMasuk = itemHari.jamMasuk || itemHari.waktuMasuk || itemHari.masuk;
+                    let rawPulang = itemHari.jamPulang || itemHari.waktuPulang || itemHari.pulang;
+                    let masuk = (rawMasuk && rawMasuk !== "-" && rawMasuk !== "--") ? String(rawMasuk).substring(0, 5) : null;
+                    let pulang = (rawPulang && rawPulang !== "-" && rawPulang !== "--") ? String(rawPulang).substring(0, 5) : null;
+
+                    if (shift === "P" || shift === "M") {
+                        hariKerja++;
+                    }
+
+                    let st = "TK";
+                    if (typeof getStatusKehadiran === "function") {
+                        st = getStatusKehadiran({
+                            waktuMasuk: masuk,
+                            waktuPulang: pulang,
+                            shiftTipe: shift,
+                            role: pegawai.role,
+                            manualStatus: itemHari.keterangan || itemHari.status
+                        });
+                    } else {
+                        st = (masuk || pulang) ? "HN" : "TK";
+                    }
+
+                    if (st === "HN") hn++;
+                    else if (st === "CS" || st === "Sakit") cs++;
+                    else if (st === "CT" || st === "Cuti") ct++;
+                    else if (st === "DL" || st === "Dinas Luar") dl++;
+                    else if (st === "LJ" || st === "Libur" || st === "Off") { /* Libur */ }
+                    else if (st.includes("TK")) tk++;
+
+                    if (st.includes("TM1")) tm1++;
+                    if (st.includes("TM2")) tm2++;
+                    if (st.includes("TM3")) tm3++;
+                    if (st.includes("PC1")) pc1++;
+                    if (st.includes("PC2")) pc2++;
+                    if (st.includes("PC3")) pc3++;
+                };
+
+                let totalHadir = hn + tm1 + tm2 + tm3 + pc1 + pc2 + pc3;
+                let targetHariKerja = hariKerja > 0 ? hariKerja : (pegawai.role === "SATPAM" ? 20 : 23);
+
+                bodyRows.push([
+                    String(globalNo++),
+                    String(pegawai.idPpnPN),
+                    pegawai.namaLengkap,
+                    String(targetHariKerja),
+                    cs > 0 ? String(cs) : "-",
+                    ct > 0 ? String(ct) : "-",
+                    dl > 0 ? String(dl) : "-",
+                    tk > 0 ? String(tk) : "-",
+                    { content: "", styles: { fillColor: [52, 73, 94] } }, // Kolom Pemisah Berwarna Dark Slate
+                    hn > 0 ? String(hn) : "-",
+                    tm1 > 0 ? String(tm1) : "-",
+                    tm2 > 0 ? String(tm2) : "-",
+                    tm3 > 0 ? String(tm3) : "-",
+                    pc1 > 0 ? String(pc1) : "-",
+                    pc2 > 0 ? String(pc2) : "-",
+                    pc3 > 0 ? String(pc3) : "-",
+                    String(totalHadir)
+                ]);
+            });
+        });
+
+        doc.autoTable({
+            startY: startY,
+            head: headCols,
+            body: bodyRows,
+            theme: 'grid',
+            styles: { fontSize: 6, cellPadding: 1, lineColor: [40, 40, 40], lineWidth: 0.2, halign: 'center' },
+            headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.5, lineColor: [40, 40, 40], lineWidth: 0.25 },
+            columnStyles: {
+                0: { cellWidth: 8, halign: 'center' },   // No
+                1: { cellWidth: 16, halign: 'center' },  // ID PPNPN
+                2: { cellWidth: 38, halign: 'left' },    // Nama
+                3: { cellWidth: 18, fontStyle: 'bold' }, // Hari Kerja
+                8: { cellWidth: 3 },                     // Lebar Kolom Pemisah Berwarna (3mm)
+                16: { cellWidth: 20, fontStyle: 'bold', fillColor: [235, 245, 251] } // Jumlah Kehadiran
+            },
+            margin: { left: 10, right: 10, top: 8, bottom: 10 }
+        });
+
+        // =========================================================
+        // BLOK TANDA TANGAN (BAGIAN BAWAH KANAN)
+        // =========================================================
+        let finalY = doc.lastAutoTable.finalY + 8;
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        // Cek jika ruang bawah tidak cukup, pindahkan TTD ke halaman baru
+        if (finalY + 35 > pageHeight) {
+            doc.addPage();
+            finalY = 15;
+        }
+
+        const alignX = pageWidth - 75; // Posisi Blok TTD di Sebelah Kanan
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(0, 0, 0);
+
+        doc.text("Manokwari, 31 Juli 2026", alignX, finalY);
+        finalY += 4;
+        doc.setFont("helvetica", "bold");
+        doc.text("Kepala Bagian Tata Usaha", alignX, finalY);
+
+        finalY += 18; // Ruang kosong TTD
+
+        doc.text("BAYU KARTIKA ROSA", alignX, finalY);
+        doc.line(alignX, finalY + 0.8, alignX + 50, finalY + 0.8); // Garis Bawah Nama
+        finalY += 4.5;
+        doc.setFont("helvetica", "normal");
+        doc.text("NIP. 19850412 200812 1 002", alignX, finalY);
+
+    } catch (err) {
+        console.error("Error pada Render Tabel Sambungan Halaman 3:", err);
     }
 }
 
-// 2. Menyembunyikan tombol Simpan & Batal Edit
-function sembunyikanTombolEdit() {
+// ==========================================
+// FIXED. PENGONTROL TOMBOL SIMPAN & BATAL EDIT TABEL
+// ==========================================
+
+// 1. FUNGSI UNTUK MEMENTIKAN / MEMUNCULKAN TOMBOL SIMPAN & BATAL EDIT
+function tandaiAdaPerubahanTabel() {
+    const btnSimpan = document.getElementById("btnSimpanSemua");
     const wrapper = document.getElementById("wrapperEditButtons");
+
+    // Jika menggunakan ID tombol langsung
+    if (btnSimpan) {
+        btnSimpan.style.display = "inline-block";
+    }
+    // Jika menggunakan ID pembungkus (wrapper)
     if (wrapper) {
-        wrapper.style.display = "none"; // Sembunyikan
+        wrapper.style.display = "flex";
+    }
+}
+
+// 2. FUNGSI UNTUK MENYEMBUNYIKAN KEMBALI TOMBOL EDIT
+function sembunyikanTombolEdit() {
+    const btnSimpan = document.getElementById("btnSimpanSemua");
+    const wrapper = document.getElementById("wrapperEditButtons");
+
+    if (btnSimpan) {
+        btnSimpan.style.display = "none";
+    }
+    if (wrapper) {
+        wrapper.style.display = "none";
     }
 }
 
@@ -1521,3 +1953,109 @@ function batalSemuaEdit() {
         renderTabel(); // Render/muat ulang tabel kembali ke data awal sebelum di-edit
     }
 }
+
+
+// ==========================================
+// EXPORT PREVIEW PDF LANDSCAPE (FIXED)
+// ==========================================
+
+window.exportPreviewPDFLandscape = function() {
+    try {
+        if (typeof globalRekap === "undefined" || !globalRekap || Object.keys(globalRekap).length === 0) {
+            alert("⚠️ Data presensi (globalRekap) masih kosong!");
+            return;
+        }
+
+        const yakin = confirm("Apakah Anda yakin ingin membuka Preview PDF Rekap Kehadiran Pegawai (Landscape)?");
+        if (!yakin) return;
+
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            alert("❌ Library jsPDF / AutoTable belum terpasang di dashboard.html!");
+            return;
+        }
+
+        // =========================================================
+        // 1. GROUPING SUPER KETAT BERDASARKAN NAMA PEGAWAI (ANTI-DUPLIKAT)
+        // =========================================================
+        const pegawaimap = {};
+
+        Object.keys(globalRekap).forEach(key => {
+            const item = globalRekap[key];
+            if (!item) return;
+
+            // Tarik Nama Lengkap murni
+            let rawNama = item.namaPegawai || item.namaLengkap || item.nama || "";
+            if (!rawNama && key.includes('_')) {
+                // Fallback jika key berbentuk "140011_2026-07-01"
+                rawNama = key.split('_')[0];
+            }
+            
+            let namaClean = String(rawNama).trim();
+            if (!namaClean || namaClean === "-") return;
+
+            // Kunci utama pengelompokan MENGGUNAKAN NAMA LENGKAP (Upper) agar tidak mungkin terduplikasi
+            let uniqueKey = namaClean.toUpperCase();
+
+            // Tarik ID PPNPN
+            let idPpnP = String(item.idPpnPN || item.idPegawai || item.id || "").trim();
+            let role = String(item.role || item.kategori || item.jabatan || "STAFF").toUpperCase().trim();
+
+            if (!pegawaimap[uniqueKey]) {
+                pegawaimap[uniqueKey] = {
+                    idPpnPN: idPpnP || "-",
+                    namaLengkap: namaClean,
+                    role: role,
+                    presensiHarian: {}
+                };
+            } else {
+                // Jika ID PPNPN sebelumnya masih "-" tapi sekarang ada isinya, perbarui ID-nya
+                if ((!pegawaimap[uniqueKey].idPpnPN || pegawaimap[uniqueKey].idPpnPN === "-") && idPpnP) {
+                    pegawaimap[uniqueKey].idPpnPN = idPpnP;
+                }
+            }
+
+            // Ekstrak Tanggal (1 s.d. 31)
+            let rawTgl = item.tanggal || item.tgl || (key.includes('_') ? key.split('_')[1] : null);
+            if (rawTgl) {
+                let tglAngka = parseInt(String(rawTgl).split('-').pop(), 10);
+                if (!isNaN(tglAngka)) {
+                    pegawaimap[uniqueKey].presensiHarian[tglAngka] = item;
+                }
+            }
+        });
+
+        // =========================================================
+        // 2. DEDUPLIKASI KETAT & KELOMPOKKAN PER ROLE
+        // =========================================================
+        const listPegawaiAll = Object.values(pegawaimap);
+        const groupedByRole = {};
+
+        listPegawaiAll.forEach(p => {
+            let r = p.role || "STAFF";
+            if (!groupedByRole[r]) groupedByRole[r] = [];
+
+            // Pengecekan mutlak: Cegah nama yang sama masuk 2 kali dalam 1 role
+            const isExist = groupedByRole[r].some(existing => 
+                existing.namaLengkap.toUpperCase() === p.namaLengkap.toUpperCase()
+            );
+
+            if (!isExist) {
+                groupedByRole[r].push(p);
+            }
+        });
+
+        // Urutkan Nama Pegawai Ascending (A - Z) di dalam tiap Role
+        Object.keys(groupedByRole).forEach(r => {
+            groupedByRole[r].sort((a, b) => a.namaLengkap.localeCompare(b.namaLengkap));
+        });
+
+        const sortedRoleKeys = Object.keys(groupedByRole).sort();
+        const totalHari = 31; // Jumlah hari dalam bulan berjalan
+
+        generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari);
+
+    } catch (err) {
+        console.error("Error pada Export PDF:", err);
+        alert("❌ Terjadi Error saat membuat PDF:\n" + err.message);
+    }
+};

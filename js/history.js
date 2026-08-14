@@ -39,7 +39,7 @@ function openRestoreModal() {
     document.getElementById("modalRestore").style.display = "flex";
 
     // Membaca data dari Firebase node 'history'
-    db.ref('history').orderByChild('id').limitToLast(10).once('value', (snapshot) => {
+    db.ref('history').orderByChild('isFinalReport').equalTo(true).limitToLast(15).once('value', (snapshot) => {
         container.innerHTML = "";
         let historyData = [];
 

@@ -30,6 +30,10 @@
     </style>
 </head>
 <body>
+    <!-- WIDGET TIMER SESI MENGAMBANG (KIRI ATAS) -->
+    <div id="sessionTimerFloating" class="timer-floating">
+        ⏳ Sesi Aktif: <span id="timerDisplay">5:00</span>
+    </div>
 
     <!-- MAIN APP CONTAINER -->
     <div id="main-app">
@@ -170,6 +174,10 @@
                         <span style="font-weight: bold; font-size: 13px; color: #2c3e50;">Aksi File:</span>
                         <button class="btn-excel" onclick="exportSemuaExcel()">⬇ Excel Semua</button>
                         <button class="btn-pdf" onclick="previewSemuaPDF()">🗎 Preview PDF</button>
+                        <!-- TOMBOL EXPORT PREVIEW PDF LANDSCAPE -->
+                        <button type="button" class="btn-pdf-landscape" onclick="exportPreviewPDFLandscape()">
+                            📄 Preview PDF Jadwal (Landscape)
+                        </button>
                     </div>
                     
                     <div style="flex-grow: 1; text-align: right; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; align-items: center;">
@@ -401,9 +409,114 @@
     </div>
 
     <!-- Modul Scripts Terpisah -->
-    <script src="js/auth.js"></script>
     <script src="js/history.js"></script>
     <script src="js/manual.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/auth.js"></script>
+
+    <!-- SCRIPT TIMER SESI USER DENGAN EFEK LAYAR PUTIH -->
+    <script>
+    (function() {
+        //Setting berapa menit timer sesi aktif
+        var MENIT_SESI = 2;
+        var totalDetikSisa = MENIT_SESI * 60;
+        var intervalTimerDashboard = null;
+
+        function updateTampilanTimer() {
+            var display = document.getElementById("timerDisplay");
+            if (!display) return;
+
+            var m = Math.floor(totalDetikSisa / 60);
+            var s = totalDetikSisa % 60;
+
+            var strM = (m < 10 ? "0" : "") + m;
+            var strS = (s < 10 ? "0" : "") + s;
+
+            display.innerText = strM + ":" + strS;
+
+            if (m < 1) {
+                display.style.color = "#e74c3c";
+            } else {
+                display.style.color = "#2ecc71";
+            }
+        }
+
+        function buatLayarMenjadiPutih() {
+            // Buat elemen overlay jika belum ada
+            var overlay = document.getElementById("sessionExpiredOverlay");
+            if (!overlay) {
+                overlay = document.createElement("div");
+                overlay.id = "sessionExpiredOverlay";
+                overlay.className = "session-expired-overlay";
+                document.body.appendChild(overlay);
+            }
+            
+            // Picu transisi warna putih
+            setTimeout(function() {
+                overlay.classList.add("active");
+            }, 10);
+        }
+
+        function mulaiTimerHitungMundur() {
+            if (intervalTimerDashboard) {
+                clearInterval(intervalTimerDashboard);
+            }
+
+            updateTampilanTimer();
+
+            intervalTimerDashboard = setInterval(function() {
+                if (totalDetikSisa > 0) {
+                    totalDetikSisa--;
+                    updateTampilanTimer();
+                } else {
+                    clearInterval(intervalTimerDashboard);
+                    
+                    // 1. Eksekusi efek layar putih
+                    buatLayarMenjadiPutih();
+
+                    // 2. Beri jeda 600ms agar animasi transisi putih selesai sebelum alert muncul
+                    setTimeout(function() {
+                        alert("⏱️ Sesi Anda telah berakhir karena tidak ada aktivitas selama beberapa menit.\nSilakan login kembali.");
+                        if (typeof logoutUser === "function") {
+                            logoutUser();
+                        } else {
+                            sessionStorage.clear();
+                            window.location.href = "index.html";
+                        }
+                    }, 600);
+                }
+            }, 1000);
+        }
+
+        function resetTimerAktivitas() {
+            totalDetikSisa = MENIT_SESI * 60;
+            updateTampilanTimer();
+        }
+
+        function handleScrollTimer() {
+            var timerWidget = document.getElementById("sessionTimerFloating");
+            var scrollTopVal = window.pageYOffset || document.documentElement.scrollTop;
+
+            if (timerWidget) {
+                if (scrollTopVal > 50) {
+                    timerWidget.classList.add("hidden-on-scroll");
+                } else {
+                    timerWidget.classList.remove("hidden-on-scroll");
+                }
+            }
+        }
+
+        window.addEventListener("load", function() {
+            mulaiTimerHitungMundur();
+
+            window.addEventListener("click", resetTimerAktivitas, true);
+            window.addEventListener("keydown", resetTimerAktivitas, true);
+            window.addEventListener("scroll", handleScrollTimer, true);
+        });
+    })();
+    </script>
+
+    
+
 </body>
 </html>
