@@ -1450,7 +1450,7 @@ function renderSingleEmployeePortraitPDF(doc, namaPegawai, data) {
     doc.text("Kepala Bagian Tata Usaha", 14, ttdY + 3.5);
     
     doc.setFont("helvetica", "bold");
-    doc.text("Bayu Kartika Rosa, S.E.", 14, ttdY + 20);
+    doc.text("$", 14, ttdY + 20);
 }
 
 function downloadPDFSingleEmployee(namaPegawai, data) {
@@ -1523,7 +1523,7 @@ function exportPreviewPDFLandscape() {
 //LANDSCAPE CHUNCKED SAMPAI BLOB
 //=============
 
-function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari) {
+function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari, tipeSpesimen = "manual") {
     if (!window.jspdf || !window.jspdf.jsPDF) {
         alert("❌ Library jsPDF / AutoTable belum dimuat!");
         return;
@@ -1711,7 +1711,7 @@ function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari) {
     });
 
     // PANGGIL TABEL SAMBUNGAN HALAMAN 3
-    renderTabelSambunganHalaman3(doc, groupedByRole, sortedRoleKeys, totalHari);
+    renderTabelSambunganHalaman3(doc, groupedByRole, sortedRoleKeys, totalHari, tipeSpesimen);
 
     // FOOTER HALAMAN
     const totalPages = doc.internal.getNumberOfPages();
@@ -1731,7 +1731,7 @@ function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari) {
 // =========================================================
 // FUNGSI RENDER TABEL SAMBUNGAN REKAPITULASI (HALAMAN 3)
 // =========================================================
-function renderTabelSambunganHalaman3(doc, groupedByRole, sortedRoleKeys, totalHari) {
+function renderTabelSambunganHalaman3(doc, groupedByRole, sortedRoleKeys, totalHari, tipeSpesimen = "manual") {
     try {
         doc.addPage();
         let startY = 8;
@@ -1902,18 +1902,54 @@ function renderTabelSambunganHalaman3(doc, groupedByRole, sortedRoleKeys, totalH
         doc.setFontSize(8.5);
         doc.setTextColor(0, 0, 0);
 
-        doc.text("Manokwari, 31 Juli 2026", alignX, finalY);
+        // =========================================================
+        // TANGGAL TTD OTOMATIS TANGGAL 1 BULAN BERIKUTNYA
+        // =========================================================
+        const daftarBulan = [
+            "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+            "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+        ];
+
+        // Ambil tahun dan bulan aktif dari variabel global (default jika kosong: Juli 2026)
+        let thnAktif = (typeof activeYear !== "undefined" && activeYear) ? activeYear : 2026;
+        let blnAktifIdx = (typeof activeMonth !== "undefined" && activeMonth !== null) ? activeMonth : 6; // 6 = Juli
+
+        // Hitung bulan berikutnya (index 0 - 11)
+        let blnBerikutnyaIdx = blnAktifIdx + 1;
+        let thnBerikutnya = thnAktif;
+
+        // Jika bulan aktif adalah Desember (index 11), bulan berikutnya menjadi Januari (index 0) tahun depan
+        if (blnBerikutnyaIdx > 11) {
+            blnBerikutnyaIdx = 0;
+            thnBerikutnya += 1;
+        }
+
+        const namaBulanBerikutnya = daftarBulan[blnBerikutnyaIdx];
+        const teksTanggalTTD = `Manokwari, 1 ${namaBulanBerikutnya} ${thnBerikutnya}`;
+
+        // Cetak ke PDF
+        doc.text(teksTanggalTTD, alignX, finalY);
         finalY += 4;
         doc.setFont("helvetica", "bold");
         doc.text("Kepala Bagian Tata Usaha", alignX, finalY);
 
-        finalY += 18; // Ruang kosong TTD
+        finalY += 20; // Ruang kosong TTD
 
-        doc.text("BAYU KARTIKA ROSA", alignX, finalY);
-        doc.line(alignX, finalY + 0.8, alignX + 50, finalY + 0.8); // Garis Bawah Nama
-        finalY += 4.5;
-        doc.setFont("helvetica", "normal");
-        doc.text("NIP. 19850412 200812 1 002", alignX, finalY);
+        // LOGIKA CETAK SPESIMEN BERDASARKAN PILIHAN
+        if (tipeSpesimen === "anchor") {
+            // PILIHAN ANCHOR DS ($)
+            doc.setFont("helvetica", "bold");
+            doc.text("$", alignX, finalY);
+            // Tanpa NIP untuk Anchor DS
+        } else {
+            // PILIHAN TTD MANUAL (BAYU KARTIKA ROSA)
+            doc.setFont("helvetica", "bold");
+            doc.text("BAYU KARTIKA ROSA", alignX, finalY);
+            doc.line(alignX, finalY + 0.8, alignX + 50, finalY + 0.8);
+            finalY += 4.5;
+            doc.setFont("helvetica", "normal");
+            doc.text("NIP. 198205102002121007", alignX, finalY);
+        }
 
     } catch (err) {
         console.error("Error pada Render Tabel Sambungan Halaman 3:", err);
@@ -2128,6 +2164,10 @@ function prosesExportPdfLandscapeDenganPilihan() {
     // Ambil list role terpilih
     const selectedRoleKeys = Array.from(checkedBoxes).map(cb => cb.value).sort();
 
+    // Ambil opsi spesimen TTD terpilih (manual / anchor)
+    const radioSelected = document.querySelector('input[name="radioSpesimen"]:checked');
+    const tipeSpesimen = radioSelected ? radioSelected.value : "manual";
+
     // Saring groupedByRole hanya untuk role terpilih
     const filteredGroupedByRole = {};
     selectedRoleKeys.forEach(r => {
@@ -2136,7 +2176,8 @@ function prosesExportPdfLandscapeDenganPilihan() {
 
     // --- KONFIRMASI AKHIR SEBELUM TAMPIL FILE ---
     const daftarRoleStr = selectedRoleKeys.join(", ");
-    const yakin = confirm(`Apakah Anda yakin ingin membuka Preview PDF Rekap Kehadiran Pegawai (Landscape) untuk kategori terpilih:\n\n👉 [ ${daftarRoleStr} ] ?`);
+    const jenisTTDStr = tipeSpesimen === "anchor" ? "Anchor DS ($)" : "TTD Manual";
+    const yakin = confirm(`Apakah Anda yakin ingin membuka Preview PDF Rekap Kehadiran Pegawai (Landscape)?\n\n👉 Kategori: [ ${daftarRoleStr} ]\n👉 Spesimen TTD: ${jenisTTDStr}`);
     
     if (!yakin) return;
 
@@ -2150,6 +2191,6 @@ function prosesExportPdfLandscapeDenganPilihan() {
 
     const totalHari = 31; // Jumlah hari dalam bulan berjalan
 
-    // Jalankan Generator PDF
-    generatePDFLandscapeChunked(filteredGroupedByRole, selectedRoleKeys, totalHari);
+    // Jalankan Generator PDF dengan membawa parameter tipeSpesimen
+    generatePDFLandscapeChunked(filteredGroupedByRole, selectedRoleKeys, totalHari, tipeSpesimen);
 }
