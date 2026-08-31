@@ -24,36 +24,33 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 💡 Membuat folder js dan menginjeksi isi firebase-config.js secara aman
       - name: Generate firebase-config.js from Secrets
-        env:
-          CFG_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
-          CFG_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
-          CFG_DB_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
-          CFG_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          CFG_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
-          CFG_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
-          CFG_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
-          CFG_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
         run: |
           mkdir -p js
-          echo "const firebaseConfig = {" > js/firebase-config.js
-          echo "  apiKey: \"$CFG_API_KEY\"," >> js/firebase-config.js
-          echo "  authDomain: \"$CFG_AUTH_DOMAIN\"," >> js/firebase-config.js
-          echo "  databaseURL: \"$CFG_DB_URL\"," >> js/firebase-config.js
-          echo "  projectId: \"$CFG_PROJECT_ID\"," >> js/firebase-config.js
-          echo "  storageBucket: \"$CFG_STORAGE_BUCKET\"," >> js/firebase-config.js
-          echo "  messagingSenderId: \"$CFG_SENDER_ID\"," >> js/firebase-config.js
-          echo "  appId: \"$CFG_APP_ID\"," >> js/firebase-config.js
-          echo "  measurementId: \"$CFG_MEASUREMENT_ID\"" >> js/firebase-config.js
-          echo "};" >> js/firebase-config.js
-          echo "" >> js/firebase-config.js
-          echo "if (typeof firebase !== 'undefined' && !firebase.apps.length) {" >> js/firebase-config.js
-          echo "  firebase.initializeApp(firebaseConfig);" >> js/firebase-config.js
-          echo "}" >> js/firebase-config.js
-          echo "" >> js/firebase-config.js
-          echo "var db = (typeof firebase !== 'undefined' && firebase.apps.length) ? firebase.database() : null;" >> js/firebase-config.js
-          echo "var database = db;" >> js/firebase-config.js
+          cat << 'EOF' > js/firebase-config.js
+          const firebaseConfig = {
+              apiKey: "${{ secrets.FIREBASE_API_KEY }}",
+              authDomain: "${{ secrets.FIREBASE_AUTH_DOMAIN }}",
+              databaseURL: "${{ secrets.FIREBASE_DATABASE_URL }}",
+              projectId: "${{ secrets.FIREBASE_PROJECT_ID }}",
+              storageBucket: "${{ secrets.FIREBASE_STORAGE_BUCKET }}",
+              messagingSenderId: "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}",
+              appId: "${{ secrets.FIREBASE_APP_ID }}",
+              measurementId: "${{ secrets.FIREBASE_MEASUREMENT_ID }}"
+          };
+
+          if (typeof firebase !== "undefined" && !firebase.apps.length) {
+              firebase.initializeApp(firebaseConfig);
+          }
+
+          var db = (typeof firebase !== "undefined" && firebase.apps.length) ? firebase.database() : null;
+          var database = db;
+          EOF
+
+      - name: Verify Config File Size
+        run: |
+          echo "=== Ukuran File firebase-config.js ==="
+          ls -lh js/firebase-config.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
