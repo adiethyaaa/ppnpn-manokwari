@@ -40,7 +40,7 @@ function checkAuthSession(requiredRole = null) {
 // 2. PROSES LOGIN
 // =========================================================
 // =========================================================
-// PROSES LOGIN (DENGAN AUTO-DETECT & FALLBACK FIREBASE)
+// PROSES LOGIN (FIXED FIREBASE INITIALIZATION)
 // =========================================================
 function prosesLogin() {
     const usernameInput = document.getElementById("loginUsername");
@@ -59,18 +59,12 @@ function prosesLogin() {
         return;
     }
 
-    // 💡 1. DETEKSI & INISIALISASI DINAMIS FIREBASE DATABASE
+    // 💡 1. INISIALISASI TANGGUH FIREBASE DATABASE
     let dbRef = null;
 
-    if (typeof db !== "undefined" && db !== null) {
-        dbRef = db;
-    } else if (typeof database !== "undefined" && database !== null) {
-        dbRef = database;
-    }
-
-    // Fallback: Jika db masih null, coba inisialisasi ulang langsung dari SDK & Config
-    if (!dbRef && typeof firebase !== "undefined") {
-        try {
+    try {
+        // Cek jika firebaseConfig tersedia tetapi app belum terinisialisasi
+        if (typeof firebase !== "undefined") {
             if (!firebase.apps.length && typeof firebaseConfig !== "undefined") {
                 firebase.initializeApp(firebaseConfig);
             }
@@ -78,14 +72,20 @@ function prosesLogin() {
                 dbRef = firebase.database();
                 window.db = dbRef;
             }
-        } catch (e) {
-            console.error("Gagal inisialisasi fallback Firebase:", e);
         }
+    } catch (errInit) {
+        console.error("Gagal inisialisasi Firebase App:", errInit);
+    }
+
+    // Fallback variabel global jika sudah diinisialisasi sebelumnya
+    if (!dbRef) {
+        if (typeof db !== "undefined" && db !== null) dbRef = db;
+        else if (typeof database !== "undefined" && database !== null) dbRef = database;
     }
 
     // 💡 2. JIKA DATABASE TETAP BELUM SIAP
     if (!dbRef) {
-        alert("❌ Koneksi Firebase belum siap!\n\nPastikan build GitHub Actions sudah selesai (centang hijau) dan lakukan Hard Refresh (Ctrl + F5).");
+        alert("❌ Koneksi Firebase belum siap!\n\nBuka Console Browser (F12) dan ketik 'firebaseConfig' untuk memastikan variabel config sudah terisi.");
         return;
     }
 
@@ -137,7 +137,6 @@ function prosesLogin() {
             }
         });
 }
-
 
 // =========================================================
 // 3. LOGOUT & MODAL KONFIRMASI
