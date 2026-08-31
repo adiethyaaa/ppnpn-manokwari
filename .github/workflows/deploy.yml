@@ -24,7 +24,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 💡 Membuat folder js/ dan menginjeksi 8 Secret secara presisi ke js/firebase-config.js
       - name: Generate firebase-config.js from Secrets
         env:
           CFG_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
