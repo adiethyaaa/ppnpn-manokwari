@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelola Pengguna & Hak Akses - Admin</title>
+    
+    <!-- Link CSS Utama -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+</head>
+
+<body>
+    <div class="admin-wrapper">
+        <!-- HEADER ADMIN DENGAN TOMBOL SERASI -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h2 style="margin: 0; color: #2c3e50; font-size: 20px;">⚙️ Kelola Pengguna & Hak Akses Fitur</h2>
+                <small style="color: #7f8c8d;">Pengaturan Administrator Kantor Regional XIV BKN Manokwari</small>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <a href="dashboard.html" class="btn-dashboard-back">
+                    ⬅ Ke Dashboard
+                </a>
+                <!-- Ubah onclick di sini -->
+                <button onclick="mintaKonfirmasiLogoutAdmin()" class="btn-pdf" style="margin: 0; padding: 8px 14px; font-size: 12px; border-radius: 5px;">
+                    🚪 Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- FORM TAMBAH / EDIT USER -->
+        <div class="section-box">
+            <h3 id="formTitle" style="margin-top: 0; color: #2980b9;">Tambah User Baru</h3>
+            <div class="form-group">
+                <input type="text" id="adminUsername" placeholder="Username (misal: operator1)">
+                <input type="text" id="adminPassword" placeholder="Password">
+                <input type="text" id="adminNama" placeholder="Nama Lengkap / Petugas">
+                <!-- FITUR BARU: DROPDOWN UNIT KERJA -->
+                    <select id="adminUnitKerja">
+                        <option value="Kanreg XIV">Kanreg XIV</option>
+                        <option value="UPT Sorong">UPT Sorong</option>
+                    </select>
+                <select id="adminRole" onchange="togglePermBox()">
+                    <option value="operator">Operator (Custom Akses)</option>
+                    <option value="administrator">Administrator (Full Akses)</option>
+                </select>
+            </div>
+
+            <!-- AREA TOMBOL ON/OFF HAK AKSES -->
+            <div id="boxPermissions" style="margin-top: 15px;">
+                <label style="font-weight: bold; color: #1f618d; font-size: 14px;">Atur Hak Akses Fitur (ON / OFF):</label>
+                <div class="perm-grid">
+                    <div class="perm-item"><span>1. Upload Shift</span> <label class="switch"><input type="checkbox" id="perm_uploadJadwal" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>2. Input Pegawai Manual</span> <label class="switch"><input type="checkbox" id="perm_inputManualPopUp" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>3. Upload Fingerprint</span> <label class="switch"><input type="checkbox" id="perm_uploadFingerprint" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>4. Re-Check Presensi</span> <label class="switch"><input type="checkbox" id="perm_recheckPresensi" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>5. Update Massal Jam</span> <label class="switch"><input type="checkbox" id="perm_updateMassal" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>6. Export Terpilih</span> <label class="switch"><input type="checkbox" id="perm_exportTerpilih" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>7. Hapus Pegawai</span> <label class="switch"><input type="checkbox" id="perm_hapusPegawai"><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>8. Export Excel All</span> <label class="switch"><input type="checkbox" id="perm_exportAllExcel" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>9. Preview PDF All</span> <label class="switch"><input type="checkbox" id="perm_previewPDF" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>10. Save History</span> <label class="switch"><input type="checkbox" id="perm_saveHistory" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>11. Restore History</span> <label class="switch"><input type="checkbox" id="perm_restoreHistory" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>12. Edit Baris Tabel</span> <label class="switch"><input type="checkbox" id="perm_editBarisTabel" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>13. Save Report Final</span> <label class="switch"><input type="checkbox" id="perm_saveReportFinal" checked><span class="slider"></span></label></div>
+                    <div class="perm-item"><span>14. Tombol Floating History</span> <label class="switch"><input type="checkbox" id="perm_bukaHistoryFloating" checked><span class="slider"></span></label></div>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; text-align: right;">
+                <button class="btn-reset" onclick="resetFormAdmin()">Batal / Reset</button>
+                <button class="btn-excel" onclick="simpanUserFirebase()">💾 Simpan User & Akses</button>
+            </div>
+        </div>
+
+        <!-- DAFTAR USER -->
+        <h3 style="color: #2c3e50;">Daftar Pengguna Aplikasi</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Nama Lengkap</th>
+                    <th>Unit Kerja</th>
+                    <th>Role</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="tabelUsersBody"></tbody>
+        </table>
+    </div>
+
+    <!-- MODAL KONFIRMASI LOGOUT ADMIN -->
+    <div class="modal-backdrop" id="modalLogoutAdmin" style="display: none;">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div style="font-size: 42px; margin-bottom: 10px;">🚪</div>
+            <h3 style="margin: 0 0 10px 0; color: #2c3e50;">Konfirmasi Logout</h3>
+            <p style="font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 20px;">
+                Apakah Anda yakin ingin keluar dari halaman Administrator?
+            </p>
+            
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button type="button" class="btn-pdf" id="btnConfirmLogoutAdmin" style="flex: 1; padding: 10px; font-size: 13px; font-weight: bold; margin: 0; border-radius: 5px; background-color: #e74c3c;" onclick="prosesLogoutAdminDenganSpinner()">
+                    Ya, Logout
+                </button>
+                <button type="button" class="btn-reset" style="flex: 1; padding: 10px; font-size: 13px; font-weight: bold; margin: 0; border-radius: 5px;" onclick="tutupModalLogoutAdmin()">
+                    Batal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+    <script src="js/auth.js"></script>
+
+</body>
+</html>
