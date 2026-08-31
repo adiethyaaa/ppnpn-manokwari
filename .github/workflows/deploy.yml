@@ -24,6 +24,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # 💡 Membuat folder js dan menginjeksi isi firebase-config.js secara aman
       - name: Generate firebase-config.js from Secrets
         env:
           CFG_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
@@ -36,15 +37,23 @@ jobs:
           CFG_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
         run: |
           mkdir -p js
-          printf 'const firebaseConfig = {\n  apiKey: "%s",\n  authDomain: "%s",\n  databaseURL: "%s",\n  projectId: "%s",\n  storageBucket: "%s",\n  messagingSenderId: "%s",\n  appId: "%s",\n  measurementId: "%s"\n};\n\nif (typeof firebase !== "undefined" && !firebase.apps.length) {\n  firebase.initializeApp(firebaseConfig);\n}\n\nvar db = (typeof firebase !== "undefined" && firebase.apps.length) ? firebase.database() : null;\nvar database = db;\n' \
-          "$CFG_API_KEY" \
-          "$CFG_AUTH_DOMAIN" \
-          "$CFG_DB_URL" \
-          "$CFG_PROJECT_ID" \
-          "$CFG_STORAGE_BUCKET" \
-          "$CFG_SENDER_ID" \
-          "$CFG_APP_ID" \
-          "$CFG_MEASUREMENT_ID" > js/firebase-config.js
+          echo "const firebaseConfig = {" > js/firebase-config.js
+          echo "  apiKey: \"$CFG_API_KEY\"," >> js/firebase-config.js
+          echo "  authDomain: \"$CFG_AUTH_DOMAIN\"," >> js/firebase-config.js
+          echo "  databaseURL: \"$CFG_DB_URL\"," >> js/firebase-config.js
+          echo "  projectId: \"$CFG_PROJECT_ID\"," >> js/firebase-config.js
+          echo "  storageBucket: \"$CFG_STORAGE_BUCKET\"," >> js/firebase-config.js
+          echo "  messagingSenderId: \"$CFG_SENDER_ID\"," >> js/firebase-config.js
+          echo "  appId: \"$CFG_APP_ID\"," >> js/firebase-config.js
+          echo "  measurementId: \"$CFG_MEASUREMENT_ID\"" >> js/firebase-config.js
+          echo "};" >> js/firebase-config.js
+          echo "" >> js/firebase-config.js
+          echo "if (typeof firebase !== 'undefined' && !firebase.apps.length) {" >> js/firebase-config.js
+          echo "  firebase.initializeApp(firebaseConfig);" >> js/firebase-config.js
+          echo "}" >> js/firebase-config.js
+          echo "" >> js/firebase-config.js
+          echo "var db = (typeof firebase !== 'undefined' && firebase.apps.length) ? firebase.database() : null;" >> js/firebase-config.js
+          echo "var database = db;" >> js/firebase-config.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
