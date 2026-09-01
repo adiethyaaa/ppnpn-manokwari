@@ -193,6 +193,121 @@ function openRestoreModal() {
     });
 }
 
+// 💡 FUNGSI EKSEKUSI RESTORE DENGAN ANIMASI POP-UP PROGRESS & PERSENTASE
+// --- RESTORE DATA SPESIFIK DARI FIREBASE (DENGAN PROGRESS BAR) ---
+function restoreFromFirebase(timestampId) {
+    if (!timestampId) {
+        alert("⚠️ ID Data History tidak valid!");
+        return;
+    }
+
+    if (!confirm("⚠️ PERHATIAN:\n\nMe-restore history akan MENIMPA pekerjaan Anda yang ada di layar saat ini. Yakin ingin melanjutkan?")) {
+        return;
+    }
+
+    // 1. Tutup Modal List History Lama
+    if (typeof tutupModalRestore === "function") {
+        tutupModalRestore();
+    } else {
+        let modalList = document.getElementById("modalRestore");
+        if (modalList) modalList.style.display = "none";
+    }
+
+    // 2. Tampilkan Modal Loading Progress
+    const modalProgress = document.getElementById("modalRestoreProgress");
+    const elPercent = document.getElementById("restorePercentText");
+    const elStatus = document.getElementById("restoreStatusText");
+    const elBar = document.getElementById("restoreProgressBar");
+
+    if (modalProgress) modalProgress.style.display = "flex";
+
+    // Helper update UI Progress
+    function updateProgress(percent, statusText) {
+        if (elPercent) elPercent.innerText = `${percent}%`;
+        if (elBar) elBar.style.width = `${percent}%`;
+        if (elStatus) elStatus.innerText = statusText;
+    }
+
+    updateProgress(15, "Menghubungkan ke Database Cloud...");
+
+    // Cek Instance Database
+    let dbRef = null;
+    if (typeof db !== "undefined" && db) dbRef = db;
+    else if (typeof database !== "undefined" && database) dbRef = database;
+    else if (typeof firebase !== "undefined" && firebase.database) dbRef = firebase.database();
+
+    if (!dbRef) {
+        if (modalProgress) modalProgress.style.display = "none";
+        alert("❌ Koneksi Firebase belum siap!");
+        return;
+    }
+
+    setTimeout(() => {
+        updateProgress(40, "Mengunduh snapshot data history...");
+
+        dbRef.ref('history/' + timestampId).once('value')
+            .then((snapshot) => {
+                let selectedState = snapshot.val();
+
+                if (!selectedState) {
+                    throw new Error("Data riwayat tidak ditemukan di Database!");
+                }
+
+                updateProgress(70, "Memulihkan variabel & state pekerjaan...");
+
+                setTimeout(() => {
+                    updateProgress(90, "Menderetkan data ke tabel utama...");
+
+                    // A. Timpa Variabel Global Aplikasi
+                    globalRekap = selectedState.globalRekap || {};
+                    dataPegawai = selectedState.dataPegawai || {};
+                    activeYear = selectedState.activeYear;
+                    activeMonth = selectedState.activeMonth;
+                    namaBulanTahun = selectedState.namaBulanTahun;
+                    isFingerprintUploaded = selectedState.isFingerprintUploaded;
+
+                    // B. Perbarui Element Teks Periode
+                    const elPeriode = document.getElementById("periodeText");
+                    if (elPeriode) {
+                        elPeriode.innerText = `Periode: ${namaBulanTahun || '-'}`;
+                    }
+
+                    // C. Atur Visibilitas Section UI
+                    const secPresensi = document.getElementById('sectionPresensi');
+                    const secManual = document.getElementById('sectionManualWrapper');
+                    
+                    if (Object.keys(globalRekap).length > 0) {
+                        if (secPresensi) secPresensi.style.display = 'block';
+                        if (secManual) secManual.style.display = 'block';
+                    } else {
+                        if (secPresensi) secPresensi.style.display = 'none';
+                        if (secManual) secManual.style.display = 'none';
+                    }
+
+                    // D. Jalankan Fungsi Render UI Bawaan Anda
+                    if (typeof updateCheckboxPegawaiManual === "function") updateCheckboxPegawaiManual();
+                    if (typeof updateFilterNamaDropdown === "function") updateFilterNamaDropdown();
+                    if (typeof renderTabel === "function") renderTabel();
+
+                    setTimeout(() => {
+                        updateProgress(100, "Selesai!");
+
+                        setTimeout(() => {
+                            if (modalProgress) modalProgress.style.display = "none";
+                            alert(`✅ Pekerjaan versi [${selectedState.dateString || 'History'}] berhasil dipulihkan dari Cloud!`);
+                        }, 300);
+                    }, 300);
+
+                }, 300);
+            })
+            .catch((err) => {
+                console.error("Error Restore History:", err);
+                if (modalProgress) modalProgress.style.display = "none";
+                alert("❌ Terjadi kesalahan: " + err.message);
+            });
+    }, 200);
+}
+
 // =========================================================
 // LOGIKA HAPUS RIWAYAT DARI CLOUD (KHUSUS ADMINISTRATOR)
 // =========================================================
@@ -272,42 +387,7 @@ function tutupModalRestore() {
     document.getElementById("modalRestore").style.display = "none";
 }
 
-// --- RESTORE DATA SPESIFIK DARI FIREBASE ---
-function restoreFromFirebase(timestampId) {
-    if (!confirm("⚠️ PERHATIAN:\n\nMe-restore history akan MENIMPA pekerjaan Anda yang ada di layar saat ini. Yakin ingin melanjutkan?")) return;
 
-    db.ref('history/' + timestampId).once('value', (snapshot) => {
-        let selectedState = snapshot.val();
-        if (!selectedState) {
-            alert("Data riwayat tidak ditemukan di Database!");
-            return;
-        }
-
-        globalRekap = selectedState.globalRekap || {};
-        dataPegawai = selectedState.dataPegawai || {};
-        activeYear = selectedState.activeYear;
-        activeMonth = selectedState.activeMonth;
-        namaBulanTahun = selectedState.namaBulanTahun;
-        isFingerprintUploaded = selectedState.isFingerprintUploaded;
-
-        document.getElementById("periodeText").innerText = `Periode: ${namaBulanTahun}`;
-
-        if (Object.keys(globalRekap).length > 0) {
-            document.getElementById('sectionPresensi').style.display = 'block';
-            document.getElementById('sectionManualWrapper').style.display = 'block';
-        } else {
-            document.getElementById('sectionPresensi').style.display = 'none';
-            document.getElementById('sectionManualWrapper').style.display = 'none';
-        }
-
-        updateCheckboxPegawaiManual();
-        updateFilterNamaDropdown();
-        renderTabel();
-        tutupModalRestore();
-
-        alert(`✅ Pekerjaan versi [${selectedState.dateString}] berhasil dipulihkan dari Cloud!`);
-    });
-}
 
 // --- VALIDASI HANYA UNTUK CATATAN "LUPA ABSEN" ---
 function recheckStatusFinalReport() {
