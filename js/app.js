@@ -1641,7 +1641,8 @@ function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari, t
                             waktuPulang: pulang !== "--" ? pulang : null,
                             shiftTipe: shift,
                             role: pegawai.role,
-                            manualStatus: ["Cuti", "Sakit", "Dinas Luar", "Libur", "Off", "LJ", "CS", "CT", "DL"].includes(itemHari.keterangan || itemHari.status) ? (itemHari.keterangan || itemHari.status) : null
+                            // 💡 PERBAIKAN: Baca dari itemHari.manualStatus (properti asli dari tabel edit)
+                            manualStatus: itemHari.manualStatus || itemHari.keterangan || itemHari.status || null
                         };
 
                         if (typeof getStatusKehadiran === "function") {
@@ -1651,15 +1652,30 @@ function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari, t
                         }
                     }
 
+                    // 💡 Paksa Jam Masuk & Pulang menjadi "--" berdasarkan status
+                    const listStatusKosong = ["CS", "CT", "DL", "TK", "LJ", "Cuti", "Sakit", "Dinas Luar", "Libur", "OFF", "Off"];
+                    if (listStatusKosong.some(statusKondisi => statusText.includes(statusKondisi))) {
+                        masuk = "--";
+                        pulang = "--";
+                    }
+
+                    // Menentukan warna background sel
+                    // 💡 PENENTUAN WARNA SOFT (PASTEL) UNTUK STATUS PRESENSI HARIAN
                     if (["LJ", "Libur", "Off", "OFF"].includes(statusText) || shift === "OFF" || shift === "Off") {
-                        bgStatus = [191, 191, 191];
+                        bgStatus = [224, 224, 224]; // Abu-abu Soft
                         if (statusText === "TK") statusText = "LJ";
                     } else if (statusText === "HN") {
-                        bgStatus = [255, 255, 255];
-                    } else if (statusText === "TK") {
-                        bgStatus = [255, 235, 238];
+                        bgStatus = [255, 255, 255]; // Putih Bersih
+                    } else if (statusText === "CS" || statusText === "Sakit") {
+                        bgStatus = [207, 226, 255]; // Biru Soft (Soft Blue)
+                    } else if (statusText === "CT" || statusText === "Cuti") {
+                        bgStatus = [84, 235, 147]; // Hijau Soft (Soft Green)
+                    } else if (statusText === "DL" || statusText === "Dinas Luar") {
+                        bgStatus = [255, 228, 196]; // Oranye Soft (Soft Orange)
+                    } else if (statusText.includes("TK")) {
+                        bgStatus = [255, 119, 119]; // Merah Soft (Soft Red)
                     } else {
-                        bgStatus = [254, 249, 231];
+                        bgStatus = [255, 243, 205]; // Kuning Soft (Keterlambatan/Lupa Absen)
                     }
 
                     let bgCellShift = bgStatus;
@@ -1832,7 +1848,8 @@ function renderTabelRekapitulasiHalamanUtama(doc, groupedByRole, sortedRoleKeys,
                             waktuPulang: pulang,
                             shiftTipe: shift,
                             role: pegawai.role,
-                            manualStatus: itemHari.keterangan || itemHari.status
+                            // 💡 PERBAIKAN: Baca dari itemHari.manualStatus
+                            manualStatus: itemHari.manualStatus || itemHari.keterangan || itemHari.status || null
                         });
                     } else {
                         st = (masuk || pulang) ? "HN" : "TK";

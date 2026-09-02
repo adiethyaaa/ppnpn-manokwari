@@ -292,9 +292,9 @@ function restoreFromFirebase(timestampId) {
                     setTimeout(() => {
                         updateProgress(100, "Selesai!");
 
+                        // 💡 MODAL LANGSUNG TERTUTUP HALUS TANPA PESAN ALERT
                         setTimeout(() => {
                             if (modalProgress) modalProgress.style.display = "none";
-                            alert(`✅ Pekerjaan versi [${selectedState.dateString || 'History'}] berhasil dipulihkan dari Cloud!`);
                         }, 300);
                     }, 300);
 
