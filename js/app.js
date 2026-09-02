@@ -1961,7 +1961,7 @@ function renderTabelRekapitulasiHalamanUtama(doc, groupedByRole, sortedRoleKeys,
         } else if (tipeSpesimen === "upt") {
             // === TTD UPT ===
             doc.setFont("helvetica", "bold");
-            doc.text("Kepala UPT BKN", alignX, finalY);
+            doc.text("Kepala UPT BKN Sorong", alignX, finalY);
             finalY += 20;
             doc.text("RAGIL BAROKAH", alignX, finalY);
             doc.line(alignX, finalY + 0.8, alignX + 50, finalY + 0.8);
