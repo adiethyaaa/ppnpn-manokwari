@@ -3,11 +3,21 @@
 // =========================================================
 
 // Initialize Session User saat Halaman Dibuka
+// Initialize Session User saat Halaman Dibuka
 (function initAuthSession() {
     try {
         let sessionRaw = localStorage.getItem("userSession") || sessionStorage.getItem("userSession") || localStorage.getItem("activeUser");
         if (sessionRaw) {
             window.currentUser = JSON.parse(sessionRaw);
+        }
+
+        // 💡 PENYESUAIAN OPSI 2: Otomatisasi Firebase Auth di Latar Belakang
+        if (typeof firebase !== "undefined" && firebase.auth) {
+            firebase.auth().onAuthStateChanged((user) => {
+                if (!user) {
+                    firebase.auth().signInAnonymously().catch(e => console.warn("Auto Auth Silent Error:", e));
+                }
+            });
         }
     } catch (e) {
         console.warn("Gagal inisialisasi user session:", e);
@@ -42,7 +52,7 @@ function checkAuthSession(requiredRole = null) {
 // =========================================================
 // PROSES LOGIN (FIXED FIREBASE INITIALIZATION)
 // =========================================================
-function prosesLogin() {
+async function prosesLogin() {
     const usernameInput = document.getElementById("loginUsername");
     const passwordInput = document.getElementById("loginPassword");
 
@@ -59,11 +69,18 @@ function prosesLogin() {
         return;
     }
 
-    // 💡 1. INISIALISASI TANGGUH FIREBASE DATABASE
-    let dbRef = null;
+    // Ubah tampilan tombol saat memproses
+    const btnLogin = document.getElementById("btnLoginSubmit");
+    let originalText = "Log In";
+    if (btnLogin) {
+        originalText = btnLogin.innerHTML;
+        btnLogin.innerHTML = "⏳ Memproses...";
+        btnLogin.disabled = true;
+    }
 
+    // 💡 1. INSISIALISASI FIREBASE DATABASE
+    let dbRef = null;
     try {
-        // Cek jika firebaseConfig tersedia tetapi app belum terinisialisasi
         if (typeof firebase !== "undefined") {
             if (!firebase.apps.length && typeof firebaseConfig !== "undefined") {
                 firebase.initializeApp(firebaseConfig);
@@ -77,34 +94,34 @@ function prosesLogin() {
         console.error("Gagal inisialisasi Firebase App:", errInit);
     }
 
-    // Fallback variabel global jika sudah diinisialisasi sebelumnya
     if (!dbRef) {
         if (typeof db !== "undefined" && db !== null) dbRef = db;
         else if (typeof database !== "undefined" && database !== null) dbRef = database;
     }
 
-    // 💡 2. JIKA DATABASE TETAP BELUM SIAP
     if (!dbRef) {
-        alert("❌ Koneksi Firebase belum siap!\n\nBuka Console Browser (F12) dan ketik 'firebaseConfig' untuk memastikan variabel config sudah terisi.");
+        alert("❌ Koneksi Firebase belum siap!");
+        if (btnLogin) { btnLogin.innerHTML = originalText; btnLogin.disabled = false; }
         return;
     }
 
-    // Ubah tampilan tombol saat memproses
-    const btnLogin = document.getElementById("btnLoginSubmit");
-    let originalText = "Log In";
-    if (btnLogin) {
-        originalText = btnLogin.innerHTML;
-        btnLogin.innerHTML = "⏳ Memproses...";
-        btnLogin.disabled = true;
+    // 💡 2. PASTIKAN USER TERAUTENTIKASI SECARA ANONIM DULU (CEK OPSI 2)
+    try {
+        if (typeof firebase !== "undefined" && firebase.auth) {
+            if (!firebase.auth().currentUser) {
+                await firebase.auth().signInAnonymously();
+            }
+        }
+    } catch (authErr) {
+        console.warn("Autentikasi Anonim Error:", authErr);
     }
 
-    // Membaca data user dari Firebase node 'users'
+    // 💡 3. MEMBACA DATA USER DARI FIREBASE NODE 'users'
     dbRef.ref('users/' + usernameVal).once('value')
         .then((snapshot) => {
             const user = snapshot.val();
 
             if (user && String(user.password).trim() === passwordVal) {
-                // Buat Payload Session Login
                 const dataUserLogin = {
                     username: user.username || usernameVal,
                     nama: user.nama || user.namaLengkap || user.username || usernameVal,
@@ -113,12 +130,10 @@ function prosesLogin() {
                     permissions: user.permissions || {}
                 };
 
-                // Simpan ke Memori & Storage Browser
                 window.currentUser = dataUserLogin;
                 localStorage.setItem("userSession", JSON.stringify(dataUserLogin));
                 sessionStorage.setItem("userSession", JSON.stringify(dataUserLogin));
 
-                // Pindah Halaman ke Dashboard
                 window.location.href = "dashboard.html";
             } else {
                 alert("❌ Username atau Password salah!");

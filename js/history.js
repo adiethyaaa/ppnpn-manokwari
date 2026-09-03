@@ -91,7 +91,7 @@ function saveToHistory(isSilent = false) {
 // --- AMBIL DAFTAR RESTORE DARI FIREBASE ---
 // --- AMBIL DAFTAR RESTORE DARI FIREBASE (MEMBACA SEMUA VERSI TERSIMPAN) ---
 // --- AMBIL DAFTAR RESTORE DARI FIREBASE (DENGAN AKSES HAPUS KHUSUS ADMIN) ---
-function openRestoreModal() {
+async function openRestoreModal() {
     let container = document.getElementById("historyListContainer");
     if (!container) return;
 
@@ -100,7 +100,18 @@ function openRestoreModal() {
     let modal = document.getElementById("modalRestore");
     if (modal) modal.style.display = "flex";
 
-    // 💡 CEK ROLE USER LOGIN
+    // 💡 1. PASTIKAN USER TERAUTENTIKASI SECARA ANONIM DULU (AGAR LOLOS "auth != null")
+    try {
+        if (typeof firebase !== "undefined" && firebase.auth) {
+            if (!firebase.auth().currentUser) {
+                await firebase.auth().signInAnonymously();
+            }
+        }
+    } catch (authErr) {
+        console.warn("Autentikasi Anonim di Restore Error:", authErr);
+    }
+
+    // 💡 2. CEK ROLE USER LOGIN
     let activeUser = null;
     if (typeof currentUser !== "undefined" && currentUser) {
         activeUser = currentUser;
@@ -124,7 +135,7 @@ function openRestoreModal() {
         return;
     }
 
-    // Membaca data riwayat dari node 'history'
+    // 💡 3. BACA DATA HISTORI
     dbRef.ref('history').limitToLast(30).once('value', (snapshot) => {
         container.innerHTML = "";
         let historyData = [];
@@ -156,7 +167,6 @@ function openRestoreModal() {
                 let timeStampDisplay = item.dateString || "-";
                 let periodeDisplay = item.namaBulanTahun || "Periode";
 
-                // 💡 TOMBOL HAPUS KHUSUS USER ADMIN
                 let btnHapusHtml = "";
                 if (isAdmin) {
                     btnHapusHtml = `
@@ -192,7 +202,6 @@ function openRestoreModal() {
         container.innerHTML = `<div style="color:red; text-align:center; padding:15px;">Gagal memuat data: ${err.message}</div>`;
     });
 }
-
 // 💡 FUNGSI EKSEKUSI RESTORE DENGAN ANIMASI POP-UP PROGRESS & PERSENTASE
 // --- RESTORE DATA SPESIFIK DARI FIREBASE (DENGAN PROGRESS BAR) ---
 function restoreFromFirebase(timestampId) {
