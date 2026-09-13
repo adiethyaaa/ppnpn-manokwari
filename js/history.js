@@ -176,20 +176,20 @@ async function openRestoreModal() {
                     `;
                 }
 
-                div.style.cssText = `display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--border-subtle); background: #ffffff; margin-bottom: 5px; border-radius: var(--radius-sm); border-left: 3.5px solid ${borderLeftColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.03); font-size: 12px; transition: background 0.15s;`;
+                div.style.cssText = `display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--border-subtle); background: #ffffff; margin-bottom: 7px; border-radius: var(--radius-sm); border-left: 4px solid ${borderLeftColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.03); font-size: 12px; gap: 12px; transition: background 0.15s;`;
 
                 div.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        <span style="font-weight: 700; color: var(--text-primary); font-size: 12px;">${timeStampDisplay} WIT</span>
+                    <div style="flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; word-break: break-word; overflow-wrap: anywhere; line-height: 1.4;">
+                        <span style="font-weight: 700; color: var(--text-primary); font-size: 12.5px;">${timeStampDisplay} WIT</span>
                         <span style="color: var(--text-muted); font-size: 11px;">•</span>
-                        <span style="color: var(--text-secondary); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis;" title="${namaUserDisplay}">${namaUserDisplay}</span>
+                        <span style="color: var(--text-secondary); font-size: 12px; font-weight: 500;">${namaUserDisplay}</span>
                         ${labelBadge}
                         <span style="color: var(--text-muted); font-size: 11px;">•</span>
-                        <span style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; color: var(--text-primary);">${periodeDisplay}</span>
-                        <span style="color: var(--text-muted); font-size: 11px;">(${countPegawai} peg.)</span>
+                        <span style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; color: var(--text-primary);">${periodeDisplay}</span>
+                        <span style="color: var(--text-muted); font-size: 11.5px;">(${countPegawai} Pegawai / PPNPN)</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: 10px;">
-                        <button class="btn btn-restore-history" style="height: 25px; padding: 0 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" onclick="restoreFromFirebase('${item.id}')" title="Pulihkan data checkpoint ini">
+                    <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                        <button class="btn btn-restore-history" style="height: 28px; padding: 0 10px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 5px;" onclick="restoreFromFirebase('${item.id}')" title="Pulihkan data checkpoint ini">
                             <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                             Restore
                         </button>

@@ -60,6 +60,11 @@ function switchTab(tabId) {
     } catch (e) {
         console.warn("Storage warning:", e);
     }
+
+    // 5. Jika kembali ke tab presensi, pastikan viewport virtual scroll terhitung akurat
+    if (tabId === 'tab-presensi' && typeof renderVirtualWindow === 'function') {
+        renderVirtualWindow(true);
+    }
 }
 
 // Listener untuk navigasi URL Hash (Back/Forward browser)
@@ -99,6 +104,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 3. Terapkan Hak Akses
     terapkanHakAksesUI();
+
+    // 4. Pulihkan State Sesi Presensi dari sessionStorage jika ada
+    muatStateSesiPresensi();
+    updateStateTombolMultiData();
 });
 
 // Dijalankan otomatis saat dashboard dibuka
@@ -200,8 +209,109 @@ function setBulanAktif(dateObj) {
     activeYear = dateObj.getFullYear();
     activeMonth = dateObj.getMonth();
     namaBulanTahun = `${BULAN_INDO[activeMonth]} ${activeYear}`;
-    document.getElementById("periodeText").innerText = `Periode: ${namaBulanTahun}`;
+    const elPeriode = document.getElementById("periodeText");
+    if (elPeriode) elPeriode.innerText = `Periode: ${namaBulanTahun}`;
 }
+
+// =========================================================
+// SISTEM PERSISTENSI DATA SESI (SESSION STORAGE)
+// Menjaga data tabel tetap ada saat browser di-refresh (F5 / reload),
+// dan otomatis terhapus bersih saat tab/browser ditutup oleh pengguna.
+// =========================================================
+function simpanStateSesiPresensi() {
+    try {
+        if (!globalRekap || Object.keys(globalRekap).length === 0) {
+            sessionStorage.removeItem('ppnpn_session_presensi_state');
+            updateStateTombolMultiData();
+            return;
+        }
+        const state = {
+            globalRekap: globalRekap,
+            dataPegawai: dataPegawai,
+            activeYear: activeYear,
+            activeMonth: activeMonth,
+            namaBulanTahun: namaBulanTahun,
+            isFingerprintUploaded: isFingerprintUploaded
+        };
+        sessionStorage.setItem('ppnpn_session_presensi_state', JSON.stringify(state));
+        updateStateTombolMultiData();
+    } catch (e) {
+        console.warn("Gagal menyimpan state sesi presensi:", e);
+    }
+}
+
+function muatStateSesiPresensi() {
+    try {
+        const raw = sessionStorage.getItem('ppnpn_session_presensi_state');
+        if (!raw) {
+            updateStateTombolMultiData();
+            return false;
+        }
+        const state = JSON.parse(raw);
+        if (state && state.globalRekap && Object.keys(state.globalRekap).length > 0) {
+            globalRekap = state.globalRekap;
+            dataPegawai = state.dataPegawai || {};
+            activeYear = state.activeYear;
+            activeMonth = state.activeMonth;
+            namaBulanTahun = state.namaBulanTahun || "";
+            isFingerprintUploaded = !!state.isFingerprintUploaded;
+
+            if (activeYear !== null && activeMonth !== null) {
+                setBulanAktif(new Date(activeYear, activeMonth, 1));
+            }
+
+            updateCheckboxPegawaiManual();
+            updateFilterNamaDropdown();
+            updateFilterKehadiranDropdown();
+            
+            const secPresensi = document.getElementById('sectionPresensi');
+            if (secPresensi) secPresensi.style.display = 'block';
+
+            const secManual = document.getElementById('sectionManualWrapper');
+            if (secManual && isFingerprintUploaded) secManual.style.display = 'block';
+
+            renderTabel();
+            updateStateTombolMultiData();
+            return true;
+        }
+    } catch (e) {
+        console.warn("Gagal memuat state sesi presensi:", e);
+    }
+    updateStateTombolMultiData();
+    return false;
+}
+
+function updateStateTombolMultiData() {
+    const adaData = globalRekap && Object.keys(globalRekap).length > 0;
+    const btnTab = document.getElementById('btnTabMultiData');
+    const btnToolbar = document.getElementById('btnBukaDrawerMassal');
+
+    if (btnTab) {
+        btnTab.disabled = !adaData;
+        if (!adaData) {
+            btnTab.classList.add('disabled');
+            btnTab.title = "Belum ada data presensi yang dimuat";
+        } else {
+            btnTab.classList.remove('disabled');
+            btnTab.title = "Buka Panel Edit Multi Data Pegawai dan PPNPN";
+        }
+    }
+
+    if (btnToolbar) {
+        btnToolbar.disabled = !adaData;
+        if (!adaData) {
+            btnToolbar.classList.add('disabled');
+            btnToolbar.title = "Belum ada data presensi yang dimuat";
+        } else {
+            btnToolbar.classList.remove('disabled');
+            btnToolbar.title = "Buka Panel Edit Multi Data Pegawai dan PPNPN";
+        }
+    }
+}
+
+window.simpanStateSesiPresensi = simpanStateSesiPresensi;
+window.muatStateSesiPresensi = muatStateSesiPresensi;
+window.updateStateTombolMultiData = updateStateTombolMultiData;
 
 function getYesterdayIso(isoDate) {
     let d = new Date(isoDate);
@@ -315,14 +425,20 @@ function toggleSidePanelMassal(show) {
     const shouldOpen = (typeof show === 'boolean') ? show : !panel.classList.contains('show');
 
     if (shouldOpen) {
+        if (!globalRekap || Object.keys(globalRekap).length === 0) {
+            alert("Data presensi belum tersedia. Silakan buat kalender shift di tab Impor & Sinkronisasi atau pulihkan data dari Riwayat.");
+            return;
+        }
         if (typeof updateCheckboxPegawaiManual === 'function') {
             updateCheckboxPegawaiManual();
         }
         panel.classList.add('show');
         if (backdrop) backdrop.classList.add('show');
+        document.body.style.overflow = 'hidden';
     } else {
         panel.classList.remove('show');
         if (backdrop) backdrop.classList.remove('show');
+        document.body.style.overflow = '';
     }
 }
 
@@ -335,7 +451,7 @@ window.toggleCheckAllManual = toggleCheckAllManual;
 function hapusPegawaiTerpilih() {
     const checkedCheckboxes = document.querySelectorAll('.manual-pegawai-checkbox:checked');
     if (checkedCheckboxes.length === 0) {
-        alert("Silakan pilih minimal 1 pegawai yang ingin dihapus dari daftar.");
+        alert("Silakan pilih minimal 1 Pegawai atau PPNPN yang ingin dihapus dari daftar.");
         return;
     }
 
@@ -345,7 +461,7 @@ function hapusPegawaiTerpilih() {
         if (dataPegawai[id]) namaTarget.push(`${dataPegawai[id]} (ID: ${id})`);
     });
 
-    let pesanKonfirmasi = `Apakah Anda yakin ingin menghapus ${checkedCheckboxes.length} pegawai terpilih berikut?\n\n- ` + namaTarget.join('\n- ') + `\n\nCatatan: Seluruh data presensi pegawai ini pada bulan/periode aktif akan dibersihkan dari aplikasi.`;
+    let pesanKonfirmasi = `Apakah Anda yakin ingin menghapus ${checkedCheckboxes.length} Pegawai dan PPNPN terpilih berikut?\n\n- ` + namaTarget.join('\n- ') + `\n\nCatatan: Seluruh data presensi pegawai ini pada bulan/periode aktif akan dibersihkan dari aplikasi.`;
 
     if (confirm(pesanKonfirmasi)) {
         checkedCheckboxes.forEach(cb => {
@@ -362,14 +478,16 @@ function hapusPegawaiTerpilih() {
         updateCheckboxPegawaiManual();
         updateFilterNamaDropdown();
         renderTabel();
-        alert(`Data presensi untuk ${checkedCheckboxes.length} pegawai terpilih berhasil dihapus.`);
+        simpanStateSesiPresensi();
+        alert(`Data presensi untuk ${checkedCheckboxes.length} Pegawai dan PPNPN terpilih berhasil dihapus.`);
     }
 }
 
 function updateFilterNamaDropdown() {
     const selectFilter = document.getElementById('filterNama');
-    const selectedRole = document.getElementById('filterRole').value;
-    selectFilter.innerHTML = '<option value="">-- Semua Pegawai --</option>';
+    if (!selectFilter) return;
+    const selectedRole = document.getElementById('filterRole')?.value || "";
+    selectFilter.innerHTML = '<option value="">-- Semua Pegawai dan PPNPN --</option>';
     
     Object.keys(dataPegawai).sort((a,b) => dataPegawai[a].localeCompare(dataPegawai[b])).forEach(id => {
         let role = "STAFF"; 
@@ -435,12 +553,7 @@ function sortTable(columnIndex) {
             return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
 
-        const tabelBody = document.getElementById("tabelAbsen")?.getElementsByTagName("tbody")[0];
-        if (tabelBody) {
-            tabelBody.innerHTML = "";
-            virtualRenderIndex = 0;
-            renderNextVirtualBatch();
-        }
+        renderVirtualWindow();
     }
 }
 
@@ -540,6 +653,7 @@ function onShiftChangeInEdit(selectElem) {
 
 // 3. FUNGSI EDIT BARIS TABEL (COMPACT & MODERN UX)
 function editBaris(btn, key) {
+    activeEditingKey = key;
     let tr = btn.closest("tr");
     tr.classList.add("sedang-diedit");
     tr.setAttribute("data-key", key); // Simpan key di elemen TR
@@ -597,6 +711,7 @@ function editBaris(btn, key) {
 }
 
 function batalEditBarisSingle(btn, key) {
+    activeEditingKey = null;
     let tr = btn.closest("tr");
     if (tr) tr.classList.remove("sedang-diedit");
     renderTabel();
@@ -604,6 +719,7 @@ function batalEditBarisSingle(btn, key) {
 }
 
 function simpanBarisSingle(btn, key) {
+    activeEditingKey = null;
     let tr = btn.closest("tr");
     let inputs = tr.querySelectorAll(".edit-input");
     let valMasuk = inputs[0] ? inputs[0].value : "";
@@ -677,6 +793,7 @@ function simpanSemuaPerubahan() {
         }
     });
 
+    activeEditingKey = null;
     renderTabel();
     alert("Seluruh perubahan data presensi di tabel berhasil disimpan.");
     sembunyikanTombolEdit();
@@ -836,13 +953,17 @@ function jalankanRecheck() {
 }
 
 // =========================================================
-// HIGH-PERFORMANCE VIRTUAL SCROLL & MEMORY OPTIMIZATION
+// HIGH-PERFORMANCE VIEWPORT VIRTUAL SCROLL & MEMORY OPTIMIZATION
 // =========================================================
 window.tableDataMaster = [];
 window.tableDataFiltered = [];
-let virtualRenderIndex = 0;
-const VIRTUAL_CHUNK_SIZE = 50;
 let isVirtualScrollAttached = false;
+let virtualRenderRAF = null;
+let lastVirtualStartIndex = -1;
+let lastVirtualEndIndex = -1;
+let activeEditingKey = null;
+const VIRTUAL_ROW_HEIGHT = 41;
+const VIRTUAL_BUFFER_ROWS = 15;
 
 function renderTabel() {
     if (typeof recheckStatusFinalReport === "function") {
@@ -893,7 +1014,8 @@ function renderTabel() {
             let trClass = "";
             if (statusKehadiran === "LJ" || record.shiftTipe === "OFF") {
                 trClass = "baris-libur";
-                kelebihanText = "<span class='teks-libur'>Libur</span>";
+                kelebihanText = "Libur";
+                kelebihanColor = "teks-libur";
                 kelebihanTextRaw = "Libur";
             } else if (statusKehadiran === "CS" || statusKehadiran === "Sakit") {
                 trClass = "baris-sakit";
@@ -1060,67 +1182,142 @@ function renderTabel() {
     updateAuditBox(); 
     updateFilterKehadiranDropdown();
     cekTombolSimpanSemua();
+    simpanStateSesiPresensi();
+    updateStateTombolMultiData();
 }
 
-function filterTabel() {
-    const filterRole = (document.getElementById('filterRole')?.value || '').trim();
-    const filterNama = (document.getElementById('filterNama')?.value || '').toLowerCase().trim();
-    const filterTanggal = (document.getElementById('filterTanggal')?.value || '').toLowerCase().trim();
-    const filterKehadiran = (document.getElementById('filterKehadiran')?.value || '').trim();
-
-    if (!window.tableDataMaster) window.tableDataMaster = [];
-
-    // Filter array di memori tanpa manipulasi DOM berulang (hemat RAM dan respon instan)
-    window.tableDataFiltered = window.tableDataMaster.filter(item => {
-        if (filterRole && item.role !== filterRole) return false;
-        if (filterNama && !item.nama.toLowerCase().includes(filterNama)) return false;
-        if (filterTanggal && !item.tanggalStr.toLowerCase().includes(filterTanggal)) return false;
-        if (filterKehadiran && item.statusKehadiran !== filterKehadiran) return false;
-        return true;
+function scheduleVirtualWindowRender() {
+    if (virtualRenderRAF) cancelAnimationFrame(virtualRenderRAF);
+    virtualRenderRAF = requestAnimationFrame(() => {
+        renderVirtualWindow(false);
     });
+}
 
+function renderVirtualWindow(force = false) {
     const tabelBody = document.getElementById('tabelAbsen')?.getElementsByTagName('tbody')[0];
     if (!tabelBody) return;
-    tabelBody.innerHTML = "";
-    virtualRenderIndex = 0;
 
-    if (window.tableDataFiltered.length === 0) {
+    if (!window.tableDataFiltered || window.tableDataFiltered.length === 0) {
         tabelBody.innerHTML = '<tr><td colspan="12" style="text-align: center; color: var(--text-muted); padding: 24px 0; font-size: 12px;">Tidak ada data yang cocok dengan filter pencarian.</td></tr>';
+        lastVirtualStartIndex = -1;
+        lastVirtualEndIndex = -1;
         return;
     }
 
-    renderNextVirtualBatch();
+    const total = window.tableDataFiltered.length;
 
-    if (!isVirtualScrollAttached) {
-        const tableWrapper = document.querySelector('.table-wrapper');
-        if (tableWrapper) {
-            tableWrapper.addEventListener('scroll', () => {
-                if (tableWrapper.scrollTop + tableWrapper.clientHeight >= tableWrapper.scrollHeight - 160) {
-                    renderNextVirtualBatch();
-                }
-            }, { passive: true });
-            isVirtualScrollAttached = true;
+    // Jika data sedikit (<= 50 baris), render langsung seluruhnya tanpa spacer
+    if (total <= 50) {
+        if (!force && lastVirtualStartIndex === 0 && lastVirtualEndIndex === total) return;
+        lastVirtualStartIndex = 0;
+        lastVirtualEndIndex = total;
+
+        let html = '';
+        for (let i = 0; i < total; i++) {
+            html += buatHtmlBarisTabel(window.tableDataFiltered[i], i);
         }
+        tabelBody.innerHTML = html;
+        return;
     }
+
+    // Hitung posisi tabel terhadap viewport & sticky header (~97px)
+    const table = document.getElementById('tabelAbsen');
+    if (!table) return;
+    const rect = table.getBoundingClientRect();
+    const stickyHeaderOffset = 97;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+    const scrolledPast = Math.max(0, stickyHeaderOffset - rect.top);
+    let startIndex = Math.max(0, Math.floor(scrolledPast / VIRTUAL_ROW_HEIGHT) - VIRTUAL_BUFFER_ROWS);
+    const visibleCount = Math.ceil(viewportHeight / VIRTUAL_ROW_HEIGHT) + (VIRTUAL_BUFFER_ROWS * 2);
+    let endIndex = Math.min(total, startIndex + visibleCount);
+
+    if (startIndex >= total) {
+        startIndex = Math.max(0, total - visibleCount);
+        endIndex = total;
+    }
+
+    // Hindari re-render jika window index tidak berubah dan bukan force render
+    if (!force && startIndex === lastVirtualStartIndex && endIndex === lastVirtualEndIndex) {
+        return;
+    }
+
+    lastVirtualStartIndex = startIndex;
+    lastVirtualEndIndex = endIndex;
+
+    const topSpacerHeight = startIndex * VIRTUAL_ROW_HEIGHT;
+    const bottomSpacerHeight = Math.max(0, (total - endIndex) * VIRTUAL_ROW_HEIGHT);
+
+    let html = '';
+    if (topSpacerHeight > 0) {
+        html += `<tr class="virtual-spacer-row" style="height:${topSpacerHeight}px; border:none !important;"><td colspan="12" style="height:${topSpacerHeight}px; padding:0 !important; margin:0 !important; line-height:0 !important; font-size:0 !important; border:none !important; background:transparent !important;"></td></tr>`;
+    }
+
+    for (let i = startIndex; i < endIndex; i++) {
+        html += buatHtmlBarisTabel(window.tableDataFiltered[i], i);
+    }
+
+    if (bottomSpacerHeight > 0) {
+        html += `<tr class="virtual-spacer-row" style="height:${bottomSpacerHeight}px; border:none !important;"><td colspan="12" style="height:${bottomSpacerHeight}px; padding:0 !important; margin:0 !important; line-height:0 !important; font-size:0 !important; border:none !important; background:transparent !important;"></td></tr>`;
+    }
+
+    tabelBody.innerHTML = html;
 }
 
-function renderNextVirtualBatch() {
-    if (!window.tableDataFiltered || window.tableDataFiltered.length === 0) return;
-    if (virtualRenderIndex >= window.tableDataFiltered.length) return;
+function buatHtmlBarisTabel(item, i) {
+    if (item.key === activeEditingKey) {
+        let curShift = item.shiftTipe || "OFF";
+        let curStatus = item.statusKehadiran || "";
+        let curMasuk = (item.jMasuk && item.jMasuk !== "--") ? item.jMasuk : "";
+        let curPulang = (item.jPulang && item.jPulang !== "--") ? item.jPulang : "";
+        let isCustomStatus = ['CT','DL','CS','Cuti','Dinas Luar','Sakit'].includes(curStatus);
+        let selectedValue = isCustomStatus ? (curStatus.includes('CT') || curStatus === 'Cuti' ? 'CT' : (curStatus.includes('DL') || curStatus === 'Dinas Luar' ? 'DL' : 'CS')) : "";
 
-    const tabelBody = document.getElementById('tabelAbsen')?.getElementsByTagName('tbody')[0];
-    if (!tabelBody) return;
+        return `
+            <tr class="sedang-diedit ${item.trClass || ''}" data-key="${item.key}">
+                <td class="nomor-urut">${i + 1}</td>
+                <td>${item.id}</td>
+                <td>${item.nama}</td>
+                <td>
+                    <select class="edit-shift" onchange="onShiftChangeInEdit(this)" style="font-size: 11px; padding: 2px 4px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px;">
+                        <option value="P" ${curShift === 'P' ? 'selected' : ''}>P</option>
+                        <option value="M" ${curShift === 'M' ? 'selected' : ''}>M</option>
+                        <option value="OFF" ${curShift === 'OFF' ? 'selected' : ''}>OFF</option>
+                    </select>
+                </td>
+                <td>${item.hariStr}</td>
+                <td>${item.tanggalStr}</td>
+                <td>
+                    <select class="edit-kehadiran" style="font-size: 11px; padding: 2px 4px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px;">
+                        <option value="" ${selectedValue === '' ? 'selected' : ''}>-- Otomatis --</option>
+                        <option value="TK" ${curStatus === 'TK' ? 'selected' : ''}>TK</option>
+                        <option value="CT" ${selectedValue === 'CT' ? 'selected' : ''}>Cuti</option>
+                        <option value="DL" ${selectedValue === 'DL' ? 'selected' : ''}>Dinas Luar</option>
+                        <option value="CS" ${selectedValue === 'CS' ? 'selected' : ''}>Sakit</option>
+                    </select>
+                </td>
+                <td><input type="time" class="edit-input" value="${curMasuk}" style="font-size: 11px; padding: 1px 3px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px; width: 100%; box-sizing: border-box;"></td>
+                <td><input type="time" class="edit-input" value="${curPulang}" style="font-size: 11px; padding: 1px 3px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px; width: 100%; box-sizing: border-box;"></td>
+                <td class="${item.totalColor}">${item.totalText}</td>
+                <td class="${item.kelebihanColor}">${item.kelebihanText}</td>
+                <td>
+                    <div class="table-actions-cell">
+                        <button class="btn-tbl-action btn-tbl-save" onclick="simpanBarisSingle(this, '${item.key}')" title="Simpan perubahan baris ini">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            Simpan
+                        </button>
+                        <button class="btn-tbl-action btn-tbl-cancel" onclick="batalEditBarisSingle(this, '${item.key}')" title="Batal edit baris ini">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            Batal
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
 
-    const endIndex = Math.min(virtualRenderIndex + VIRTUAL_CHUNK_SIZE, window.tableDataFiltered.length);
-    const fragment = document.createDocumentFragment();
-
-    for (let i = virtualRenderIndex; i < endIndex; i++) {
-        const item = window.tableDataFiltered[i];
-        const tr = document.createElement('tr');
-        if (item.trClass) tr.className = item.trClass;
-        tr.setAttribute('data-key', item.key);
-
-        tr.innerHTML = `
+    return `
+        <tr class="${item.trClass || ''}" data-key="${item.key}">
             <td class="nomor-urut">${i + 1}</td>
             <td>${item.id}</td>
             <td>${item.nama}</td>
@@ -1144,12 +1341,34 @@ function renderNextVirtualBatch() {
                     </button>
                 </div>
             </td>
-        `;
-        fragment.appendChild(tr);
-    }
+        </tr>
+    `;
+}
 
-    tabelBody.appendChild(fragment);
-    virtualRenderIndex = endIndex;
+function filterTabel() {
+    const filterRole = (document.getElementById('filterRole')?.value || '').trim();
+    const filterNama = (document.getElementById('filterNama')?.value || '').toLowerCase().trim();
+    const filterTanggal = (document.getElementById('filterTanggal')?.value || '').toLowerCase().trim();
+    const filterKehadiran = (document.getElementById('filterKehadiran')?.value || '').trim();
+
+    if (!window.tableDataMaster) window.tableDataMaster = [];
+
+    // Filter array di memori tanpa manipulasi DOM berulang (hemat RAM dan respon instan)
+    window.tableDataFiltered = window.tableDataMaster.filter(item => {
+        if (filterRole && item.role !== filterRole) return false;
+        if (filterNama && !item.nama.toLowerCase().includes(filterNama)) return false;
+        if (filterTanggal && !item.tanggalStr.toLowerCase().includes(filterTanggal)) return false;
+        if (filterKehadiran && item.statusKehadiran !== filterKehadiran) return false;
+        return true;
+    });
+
+    renderVirtualWindow(true);
+
+    if (!isVirtualScrollAttached) {
+        window.addEventListener('scroll', scheduleVirtualWindowRender, { passive: true });
+        window.addEventListener('resize', scheduleVirtualWindowRender, { passive: true });
+        isVirtualScrollAttached = true;
+    }
 }
 
 function resetFilter() {
@@ -1424,6 +1643,11 @@ function parseKelebihanTextToMinutes(text) {
     return isNegative ? -totalM : totalM;
 }
 
+function stripHtml(str) {
+    if (!str) return "";
+    return String(str).replace(/<[^>]*>/g, '').trim();
+}
+
 function cleanStatusForExport(statusStr) {
     if (!statusStr) return "";
     return statusStr.replace("Lupa Absen + ", "").replace("Lupa Absen", "").trim();
@@ -1442,7 +1666,7 @@ function getVisibleData() {
             "Jam Masuk": item.jMasuk || "--",
             "Jam Pulang": item.jPulang || "--",
             "Total Waktu": item.totalText || "0 J 0 M",
-            "Ket/Kelebihan": item.kelebihanText || "0 M"
+            "Ket/Kelebihan": stripHtml(item.kelebihanTextRaw || item.kelebihanText || "0 M")
         }));
     }
     const rows = document.querySelectorAll('#tabelAbsen tbody tr');
@@ -1460,7 +1684,7 @@ function getVisibleData() {
                 "Jam Masuk": row.cells[7].innerText,
                 "Jam Pulang": row.cells[8].innerText,
                 "Total Waktu": row.cells[9].innerText,
-                "Ket/Kelebihan": row.cells[10].innerText
+                "Ket/Kelebihan": stripHtml(row.cells[10].innerText)
             });
         }
     });
@@ -1480,7 +1704,7 @@ function getAllData() {
             "Jam Masuk": item.jMasuk || "--",
             "Jam Pulang": item.jPulang || "--",
             "Total Waktu": item.totalText || "0 J 0 M",
-            "Ket/Kelebihan": item.kelebihanText || "0 M"
+            "Ket/Kelebihan": stripHtml(item.kelebihanTextRaw || item.kelebihanText || "0 M")
         }));
     }
     const rows = document.querySelectorAll('#tabelAbsen tbody tr');
@@ -1498,7 +1722,7 @@ function getAllData() {
                 "Jam Masuk": row.cells[7].innerText,
                 "Jam Pulang": row.cells[8].innerText,
                 "Total Waktu": row.cells[9].innerText,
-                "Ket/Kelebihan": row.cells[10].innerText
+                "Ket/Kelebihan": stripHtml(row.cells[10].innerText)
             });
         }
     });
@@ -1631,10 +1855,11 @@ function renderSingleEmployeePortraitPDF(doc, namaPegawai, data) {
         if (statusClean !== "LJ" && statusClean !== "Libur") {
             nonLjCount++;
         }
+        let kelClean = stripHtml(item["Ket/Kelebihan"]);
         totalWaktuMnt += parseTimeTextToMinutes(item["Total Waktu"]);
-        totalKelebihanMnt += parseKelebihanTextToMinutes(item["Ket/Kelebihan"]);
+        totalKelebihanMnt += parseKelebihanTextToMinutes(kelClean);
 
-        return { ...item, "Kehadiran": statusClean };
+        return { ...item, "Kehadiran": statusClean, "Ket/Kelebihan": kelClean };
     });
 
     let twJ = Math.floor(totalWaktuMnt / 60);
@@ -2303,6 +2528,7 @@ function sembunyikanTombolEdit() {
 // 3. Fungsi saat tombol "✖ Batal" diklik
 function batalSemuaEdit() {
     if (confirm("Apakah Anda yakin ingin membatalkan seluruh perubahan yang belum disimpan?")) {
+        activeEditingKey = null;
         sembunyikanTombolEdit();
         renderTabel(); // Render/muat ulang tabel kembali ke data awal sebelum di-edit
     }

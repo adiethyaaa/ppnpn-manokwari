@@ -72,21 +72,35 @@ function simpanUserFirebase() {
 }
 
 // 2. MUAT DAFTAR USER (MEMBACA & MENAMPILKAN UNIT KERJA)
-function muatDaftarUser() {
+async function muatDaftarUser() {
     const database = getDb();
+    const tbody = document.getElementById("tabelUsersBody");
+
     if (!database) {
-        // Jika Firebase belum siap, coba panggil kembali setelah 500ms
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);"><span class="spinner-login"></span> Menghubungkan ke Database Cloud...</td></tr>`;
+        }
         setTimeout(muatDaftarUser, 500);
         return;
     }
-    database.ref('users').on('value', (snapshot) => {
-        const tbody = document.getElementById("tabelUsersBody");
-        if (!tbody) return;
 
+    // Pastikan user terautentikasi di Firebase (Anonymous Auth) agar lolos aturan security rules (auth != null)
+    try {
+        if (typeof firebase !== "undefined" && firebase.auth) {
+            if (!firebase.auth().currentUser) {
+                await firebase.auth().signInAnonymously();
+            }
+        }
+    } catch (authErr) {
+        console.warn("Autentikasi Firebase di Admin:", authErr);
+    }
+
+    database.ref('users').on('value', (snapshot) => {
+        if (!tbody) return;
         tbody.innerHTML = "";
         
         if (!snapshot.exists()) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#7f8c8d;">Belum ada data pengguna.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted); font-style: italic;">Belum ada data pengguna yang tersimpan di database.</td></tr>`;
             return;
         }
 
@@ -96,22 +110,34 @@ function muatDaftarUser() {
 
             const tr = document.createElement("tr");
             const roleBadge = user.role === 'administrator' ? 'status-hn' : 'status-dl';
-            const unitTeks = user.unitKerja || 'Kanreg XIV'; // Default jika data lama belum punya unitKerja
+            const unitTeks = user.unitKerja || 'Kanreg XIV';
             
             tr.innerHTML = `
-                <td><b>${user.username}</b></td>
+                <td style="padding-left: 14px;"><b>${user.username}</b></td>
                 <td>${user.nama || '-'}</td>
-                <td><span style="background: #eef2f7; color: #2c3e50; font-weight: 600; padding: 4px 10px; border-radius: 12px; font-size: 12px;">${unitTeks}</span></td>
-                <td><span class="status-badge ${roleBadge}">${(user.role || 'operator').toUpperCase()}</span></td>
-                <td>
-                    <button class="btn-edit" onclick="editUser('${user.username}')">Edit Akses</button>
-                    ${user.username !== '14' ? `<button class="btn-hapus" onclick="hapusUser('${user.username}')">Hapus</button>` : ''}
+                <td style="text-align: center;"><span style="background: #eef2f7; color: #2c3e50; font-weight: 600; padding: 3px 9px; border-radius: 999px; font-size: 11px;">${unitTeks}</span></td>
+                <td style="text-align: center;"><span class="status-badge ${roleBadge}">${(user.role || 'operator').toUpperCase()}</span></td>
+                <td style="text-align: center;">
+                    <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: center;">
+                        <button type="button" class="btn btn-ghost" style="height: 27px; padding: 0 8px; font-size: 11.5px; border: 1px solid var(--border-subtle);" onclick="editUser('${user.username}')" title="Ubah data & hak akses pengguna ini">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            Edit
+                        </button>
+                        ${user.username !== '14' ? `
+                        <button type="button" class="btn btn-hapus-pegawai" style="height: 27px; padding: 0 8px; font-size: 11.5px;" onclick="hapusUser('${user.username}')" title="Hapus akun ini">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            Hapus
+                        </button>` : ''}
+                    </div>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     }, (error) => {
         console.error("Error Firebase Realtime:", error);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: #b91c1c; font-weight: 500;">Gagal memuat pengguna: ${error.message}</td></tr>`;
+        }
     });
 }
 

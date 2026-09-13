@@ -12,6 +12,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="js/firebase-config.js"></script>
 </head>
 
@@ -38,27 +39,76 @@
             </div>
         </div>
 
-        <!-- FORM TAMBAH / EDIT USER -->
-        <div class="section-box">
-            <h3 id="formTitle" style="margin-top: 0; color: #2980b9;">Tambah User Baru</h3>
-            <div class="form-group">
-                <input type="text" id="adminUsername" placeholder="Username (misal: operator1)">
-                <input type="text" id="adminPassword" placeholder="Password">
-                <input type="text" id="adminNama" placeholder="Nama Lengkap / Petugas">
-                <!-- FITUR BARU: DROPDOWN UNIT KERJA -->
-                    <select id="adminUnitKerja">
+        <!-- FORM TAMBAH / EDIT USER (CLEAN EXECUTIVE REDESIGN) -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="admin-card-icon">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                    </span>
+                    <div>
+                        <h3 id="formTitle" style="margin: 0; color: var(--text-primary); font-size: 15px; font-weight: 700;">Tambah Pengguna Baru</h3>
+                        <small style="color: var(--text-secondary); font-size: 11.5px;">Atur akun login, nama petugas, penugasan unit kerja, dan hak akses operasional</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-form-grid">
+                <div class="admin-field-group">
+                    <label class="admin-label" for="adminUsername">
+                        Username <span class="required-star">*</span>
+                    </label>
+                    <input type="text" id="adminUsername" class="admin-input" placeholder="Contoh: operator1" autocomplete="off">
+                    <span class="admin-help-text">Gunakan huruf kecil atau angka tanpa spasi</span>
+                </div>
+
+                <div class="admin-field-group">
+                    <label class="admin-label" for="adminPassword">
+                        Password <span class="required-star">*</span>
+                    </label>
+                    <input type="text" id="adminPassword" class="admin-input" placeholder="Masukkan password pengguna" autocomplete="new-password">
+                    <span class="admin-help-text">Minimal 4 karakter kombinasi huruf/angka</span>
+                </div>
+
+                <div class="admin-field-group">
+                    <label class="admin-label" for="adminNama">
+                        Nama Lengkap Petugas <span class="required-star">*</span>
+                    </label>
+                    <input type="text" id="adminNama" class="admin-input" placeholder="Nama lengkap petugas">
+                    <span class="admin-help-text">Nama yang tercatat pada riwayat checkpoint</span>
+                </div>
+
+                <div class="admin-field-group">
+                    <label class="admin-label" for="adminUnitKerja">
+                        Unit Kerja <span class="required-star">*</span>
+                    </label>
+                    <select id="adminUnitKerja" class="admin-select">
                         <option value="Kanreg XIV">Kanreg XIV</option>
                         <option value="UPT Sorong">UPT Sorong</option>
                     </select>
-                <select id="adminRole" onchange="togglePermBox()">
-                    <option value="operator">Operator (Custom Akses)</option>
-                    <option value="administrator">Administrator (Full Akses)</option>
-                </select>
+                    <span class="admin-help-text">Penugasan kantor operasional</span>
+                </div>
+
+                <div class="admin-field-group admin-field-span-full">
+                    <label class="admin-label" for="adminRole">
+                        Tingkat Peran (Role) <span class="required-star">*</span>
+                    </label>
+                    <select id="adminRole" class="admin-select" onchange="togglePermBox()">
+                        <option value="operator">Operator (Dapat diatur hak akses fiturnya secara fleksibel)</option>
+                        <option value="administrator">Administrator (Hak akses penuh tanpa batasan fitur)</option>
+                    </select>
+                </div>
             </div>
 
             <!-- AREA TOMBOL ON/OFF HAK AKSES -->
-            <div id="boxPermissions" style="margin-top: 15px;">
-                <label style="font-weight: bold; color: #1f618d; font-size: 14px;">Atur Hak Akses Fitur (ON / OFF):</label>
+            <div id="boxPermissions" style="margin-top: 18px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+                    <div>
+                        <span style="font-weight: 700; color: var(--text-primary); font-size: 13px;">Hak Akses Fitur Aplikasi (Operator)</span>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">Aktifkan (ON) atau matikan (OFF) akses fitur spesifik untuk akun operator ini</div>
+                    </div>
+                    <span class="perm-badge-note">Granular Access Control</span>
+                </div>
                 <div class="perm-grid">
                     <div class="perm-item"><span>1. Upload Shift</span> <label class="switch"><input type="checkbox" id="perm_uploadJadwal" checked><span class="slider"></span></label></div>
                     <div class="perm-item"><span>2. Input Pegawai Manual</span> <label class="switch"><input type="checkbox" id="perm_inputManualPopUp" checked><span class="slider"></span></label></div>
@@ -77,29 +127,43 @@
                 </div>
             </div>
 
-            <div style="margin-top: 15px; text-align: right; display: flex; justify-content: flex-end; gap: 8px;">
-                <button class="btn btn-ghost" onclick="resetFormAdmin()">Batal / Reset</button>
-                <button class="btn btn-excel" onclick="simpanUserFirebase()">
+            <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 8px;">
+                <button type="button" class="btn btn-ghost" onclick="resetFormAdmin()" style="border: 1px solid var(--border-subtle); height: 34px; font-size: 12px;">Batal / Reset</button>
+                <button type="button" class="btn btn-excel" onclick="simpanUserFirebase()" style="height: 34px; font-size: 12px;">
                     <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                    Simpan User & Akses
+                    Simpan User & Hak Akses
                 </button>
             </div>
         </div>
 
         <!-- DAFTAR USER -->
-        <h3 style="color: var(--text-primary); font-size: 15px; margin-top: 24px; margin-bottom: 12px;">Daftar Pengguna Aplikasi</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Username</th>
-                    <th>Nama Lengkap</th>
-                    <th>Unit Kerja</th>
-                    <th>Role</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody id="tabelUsersBody"></tbody>
-        </table>
+        <div style="margin-top: 28px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; color: var(--text-primary); font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Daftar Pengguna Aplikasi
+            </h3>
+            <button type="button" class="btn btn-ghost" onclick="muatDaftarUser()" style="height: 28px; font-size: 11.5px; border: 1px solid var(--border-subtle); display: inline-flex; align-items: center; gap: 5px;" title="Segarkan daftar pengguna">
+                <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                Segarkan
+            </button>
+        </div>
+
+        <div class="table-wrapper" style="margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <table style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th style="width: 20%; text-align: left; padding-left: 14px;">Username</th>
+                        <th style="width: 28%; text-align: left;">Nama Lengkap Petugas</th>
+                        <th style="width: 18%; text-align: center;">Unit Kerja</th>
+                        <th style="width: 16%; text-align: center;">Role</th>
+                        <th style="width: 18%; text-align: center;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelUsersBody">
+                    <tr><td colspan="5" style="text-align: center; padding: 24px; color: var(--text-muted);"><span class="spinner-login"></span> Menghubungkan ke Database Cloud...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- MODAL KONFIRMASI LOGOUT ADMIN -->
@@ -124,8 +188,8 @@
         </div>
     </div>
 
-    <script src="js/admin.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
 
 </body>
 </html>

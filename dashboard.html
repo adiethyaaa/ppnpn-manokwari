@@ -3,30 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Laporan Presensi Pegawai v.15</title>
+    <title>Dashboard - Laporan Presensi Pegawai dan PPNPN v.15</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231a5276'/><path d='M25 18h32l18 18v46H25z' fill='white'/><path d='M57 18v18h18' fill='%23d5dbdb'/><rect x='34' y='52' width='7' height='18' rx='2' fill='%233498db'/><rect x='46' y='42' width='7' height='28' rx='2' fill='%232ecc71'/><rect x='58' y='34' width='7' height='36' rx='2' fill='%23f1c40f'/></svg>">
     <link rel="stylesheet" href="css/style.css">
     
-    <!-- Library External -->
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <!-- SheetJS (xlsx.full.min.js) via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- jsPDF & autoTable via CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-
+    <!-- Firebase Core & Realtime Database SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="js/firebase-config.js"></script>
+    <script src="js/auth.js"></script>
     
     <!-- Script Auth dipanggil awal & Langsung Proteksi -->
-    <script src="js/auth.js"></script>
     <script>
         // SCRIPT PROTEKSI: Jika belum login, langsung tendang ke index.html
         checkAuthSession();
     </script>
 
+    <!-- Inline Style Override Safeguard -->
     <style>
         #main-app { display: block !important; }
     </style>
@@ -43,7 +45,7 @@
                 </div>
                 <div class="brand-info">
                     <div class="brand-title-row">
-                        <h1 class="brand-title">Laporan Kehadiran Pegawai</h1>
+                        <h1 class="brand-title">Laporan Kehadiran Pegawai dan PPNPN</h1>
                         <span class="version-pill">v.15</span>
                     </div>
                     <span class="brand-subtitle">Kantor Regional XIV BKN Manokwari</span>
@@ -63,8 +65,15 @@
                 </div>
             </div>
 
-            <!-- RIGHT: USER PROFILE INTERACTIVE DROPDOWN (POJOK KANAN ATAS) -->
+            <!-- RIGHT: USER PROFILE & SESSION TIMER (POJOK KANAN ATAS) -->
             <div class="header-user-section">
+                <!-- COMPACT SESSION TIMER (DI LUAR DROPDOWN, SEBELAH KIRI BADGE PROFIL) -->
+                <div class="session-timer-pill" id="sessionTimerPill" title="Sisa waktu sesi aktif sebelum logout otomatis">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span class="session-timer-label">Sesi:</span>
+                    <span class="session-timer-val" id="timerCountdown">03:00</span>
+                </div>
+
                 <div class="user-dropdown-container">
                     <button type="button" class="user-profile-badge-btn" id="btnUserDropdownToggle" onclick="toggleUserDropdown(event)" aria-haspopup="true" aria-expanded="false" title="Menu Pengguna">
                         <div class="user-avatar-circle" id="userAvatarInitials">U</div>
@@ -80,13 +89,6 @@
                         <div class="dropdown-header">
                             <div class="dropdown-user-name" id="dropdownUserName">User</div>
                             <div class="dropdown-user-unit" id="lblSessionUnit">Kanreg XIV</div>
-                        </div>
-                        <div class="dropdown-session-box">
-                            <span class="dropdown-session-text">
-                                <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                Sesi Aktif:
-                            </span>
-                            <span class="dropdown-session-timer" id="timerCountdown">03:00</span>
                         </div>
                         <div class="dropdown-divider"></div>
                         
@@ -125,7 +127,7 @@
                 </button>
             </div>
             <div class="tab-nav-right">
-                <button type="button" class="btn-tab-multi-data" id="btnTabMultiData" onclick="toggleSidePanelMassal(true)" title="Buka Panel Edit Multi Data Pegawai">
+                <button type="button" class="btn-tab-multi-data" id="btnTabMultiData" onclick="toggleSidePanelMassal(true)" title="Buka Panel Edit Multi Data Pegawai dan PPNPN" disabled>
                     <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><line x1="8" y1="9" x2="11" y2="9"/><line x1="8" y1="13" x2="11" y2="13"/></svg>
                     <span>Edit Multi Data</span>
                 </button>
@@ -165,9 +167,9 @@
                             </select>
                         </div>
                         <div class="filter-item flex-2">
-                            <label for="filterNama">Nama Pegawai:</label>
+                            <label for="filterNama">Nama Pegawai / PPNPN:</label>
                             <select id="filterNama" onchange="filterTabel()">
-                                <option value="">Semua Pegawai</option>
+                                <option value="">Semua Pegawai dan PPNPN</option>
                             </select>
                         </div>
                         <div class="filter-item">
@@ -207,7 +209,7 @@
                         </div>
                         
                         <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                            <button type="button" class="btn btn-ghost" id="btnBukaDrawerMassal" onclick="toggleSidePanelMassal(true)" title="Buka Panel Edit Multi Data Pegawai" style="border: 1px solid var(--border-subtle); color: var(--brand-blue); font-weight: 600;">
+                            <button type="button" class="btn btn-ghost" id="btnBukaDrawerMassal" onclick="toggleSidePanelMassal(true)" title="Buka Panel Edit Multi Data Pegawai dan PPNPN" style="border: 1px solid var(--border-subtle); color: var(--brand-blue); font-weight: 600;" disabled>
                                 <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><line x1="8" y1="9" x2="11" y2="9"/><line x1="8" y1="13" x2="11" y2="13"/></svg>
                                 Edit Multi Data
                             </button>
@@ -228,13 +230,12 @@
                                 <span id="lblModeEditActive">Mode Edit Aktif</span>
                             </div>
                             <div style="height: 16px; width: 1px; background: rgba(255,255,255,0.2);"></div>
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                <button type="button" class="btn btn-excel" id="btnSimpanSemua" onclick="simpanSemuaPerubahan()" style="height: 29px; padding: 0 13px; font-size: 12px;">
-                                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                                    Simpan Semua Edit
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button type="button" class="btn-floating-action btn-floating-save" onclick="simpanSemuaPerubahan()">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                    Simpan Perubahan
                                 </button>
-                                <button type="button" class="btn btn-ghost" id="btnBatalEdit" onclick="batalSemuaEdit()" style="height: 29px; padding: 0 11px; font-size: 12px; color: #cbd5e1; border-color: #475569;">
-                                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                <button type="button" class="btn-floating-action btn-floating-cancel" onclick="batalSemuaEdit()">
                                     Batal
                                 </button>
                             </div>
@@ -250,7 +251,7 @@
                                 <tr>
                                     <th onclick="sortTable(0)">No</th>
                                     <th onclick="sortTable(1)">ID</th>
-                                    <th onclick="sortTable(2)">Nama</th>
+                                    <th onclick="sortTable(2)">Nama Pegawai / PPNPN</th>
                                     <th onclick="sortTable(3)">Shift</th>
                                     <th onclick="sortTable(4)">Hari</th>
                                     <th onclick="sortTable(5)">Tanggal</th>
@@ -263,7 +264,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- Data di-render melalui JavaScript -->
+                                <!-- Data di-render melalui JavaScript Virtual Scroll -->
                             </tbody>
                         </table>
                     </div>
@@ -311,12 +312,12 @@
                                 <span class="step-badge">Langkah 1</span>
                                 <h4 style="margin: 4px 0 6px 0; color: #047857; font-size: 14px; font-weight: 700;">Upload Jadwal Shift Bulanan</h4>
                                 <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">
-                                    Unggah berkas Excel (.xls / .xlsx) jadwal shift untuk membentuk kalender kerja dasar seluruh pegawai.
+                                    Unggah berkas Excel (.xls / .xlsx) jadwal shift untuk membentuk kalender kerja dasar seluruh Pegawai dan PPNPN.
                                 </p>
                             </div>
                             <button type="button" class="btn btn-ghost" onclick="bukaModalPegawaiManual()" style="border: 1px solid var(--border-subtle); font-size: 12px; height: 32px; display: inline-flex; align-items: center; gap: 6px;">
                                 <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-                                Input Pegawai Manual
+                                Input Pegawai dan PPNPN Manual
                             </button>
                         </div>
 
@@ -334,7 +335,7 @@
                         <span class="step-badge blue">Langkah 2</span>
                         <h4 style="margin: 2px 0 8px 0; color: #0369a1; font-size: 13.5px; font-weight: 700;">Integrasikan / Replace Data Kehadiran Mesin</h4>
                         <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 12px 0;">
-                            Unggah berkas rekap dari mesin presensi untuk mengisi otomatis jam masuk dan jam pulang pegawai.
+                            Unggah berkas rekap dari mesin presensi untuk mengisi otomatis jam masuk dan jam pulang Pegawai dan PPNPN.
                         </p>
                         <div class="form-group">
                             <input type="file" id="uploadExcel" accept=".xls,.xlsx">
@@ -444,93 +445,80 @@
          ========================================================= -->
     <div id="sideDrawerBackdrop" class="side-drawer-backdrop" onclick="toggleSidePanelMassal(false)"></div>
     
-    <aside id="sidePanelMassal" class="side-drawer-panel" aria-label="Panel Edit Multi Data Pegawai">
+    <aside id="sidePanelMassal" class="side-drawer-panel" aria-label="Panel Edit Multi Data Pegawai dan PPNPN">
         <!-- HEADER DRAWER -->
         <div class="side-drawer-header">
             <h3 class="side-drawer-header-title">
                 <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><line x1="8" y1="9" x2="11" y2="9"/><line x1="8" y1="13" x2="11" y2="13"/></svg>
-                Edit Multi Data Pegawai
+                Edit Multi Data Pegawai dan PPNPN
             </h3>
             <button type="button" class="side-drawer-close" onclick="toggleSidePanelMassal(false)" title="Tutup Panel">✕</button>
         </div>
 
-        <!-- STICKY & FLOATING UPDATE CONTROLS (TETAP MENEMPEL SAAT CHECKLIST DISCROLL) -->
+        <!-- STICKY UPDATE CONTROLS (CLEAN EXECUTIVE STYLE) -->
         <div class="drawer-sticky-controls">
             <div class="drawer-controls-title">
-                <span style="display: flex; align-items: center; gap: 5px;">
-                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span style="display: flex; align-items: center; gap: 6px; font-weight: 700; color: #1e293b;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     Update Jam Presensi Terpilih
                 </span>
-                <span id="selectedPegawaiCountBadge" style="background: white; border: 1px solid #bae6fd; color: #0284c7; padding: 1px 7px; border-radius: 999px; font-size: 10.5px; text-transform: none;">0 terpilih</span>
+                <span id="selectedPegawaiCountBadge" class="drawer-count-badge">0 terpilih</span>
             </div>
             
             <div class="drawer-form-grid">
                 <div>
-                    <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 3px;">Tanggal:</label>
-                    <input type="date" id="tanggalManual" style="height: 30px; font-size: 11.5px; width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0 6px; box-sizing: border-box;">
+                    <label class="drawer-field-label">Tanggal:</label>
+                    <input type="date" id="tanggalManual" class="drawer-field-input">
                 </div>
                 <div>
-                    <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 3px;">Jam:</label>
-                    <input type="time" id="jamManual" style="height: 30px; font-size: 11.5px; width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0 6px; box-sizing: border-box;">
+                    <label class="drawer-field-label">Jam:</label>
+                    <input type="time" id="jamManual" class="drawer-field-input">
                 </div>
             </div>
 
-            <div style="margin-bottom: 8px;">
-                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 3px;">Terapkan Sebagai:</label>
-                <select id="ketManual" style="height: 30px; font-size: 11.5px; width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: white; box-sizing: border-box;">
+            <div style="margin-bottom: 10px;">
+                <label class="drawer-field-label">Terapkan Sebagai:</label>
+                <select id="ketManual" class="drawer-field-select">
                     <option value="masuk">Set sebagai Jam Masuk</option>
                     <option value="pulang">Set sebagai Jam Pulang</option>
                 </select>
             </div>
 
             <div class="drawer-action-row">
-                <button type="button" class="btn btn-upload" onclick="tambahDataManual()" style="flex: 1; height: 32px; font-size: 12px; justify-content: center;">
-                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <button type="button" class="btn-drawer-primary" onclick="tambahDataManual()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
                     Terapkan Jam
                 </button>
-                <button type="button" id="btnUndoMassal" class="btn btn-undo" onclick="undoUpdateMassal()" disabled title="Kembali ke posisi sebelum update massal terakhir" style="height: 32px; font-size: 12px;">
+                <button type="button" id="btnUndoMassal" class="btn-drawer-undo" onclick="undoUpdateMassal()" disabled title="Kembali ke posisi sebelum update massal terakhir">
                     <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                     Undo
                 </button>
             </div>
         </div>
 
-        <!-- BODY SCROLLABLE: SEARCH & CHECKLIST PEGAWAI -->
+        <!-- BODY SCROLLABLE: SEARCH & CHECKLIST PEGAWAI DAN PPNPN -->
         <div class="side-drawer-body">
             <div>
-                <input type="text" id="inputSearchDrawerPegawai" placeholder="Cari nama atau ID pegawai..." oninput="filterDrawerPegawai(this.value)" style="width: 100%; height: 30px; font-size: 12px; padding: 0 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-surface-subtle); box-sizing: border-box;">
+                <input type="text" id="inputSearchDrawerPegawai" class="drawer-search-input" placeholder="Cari nama atau ID pegawai / PPNPN..." oninput="filterDrawerPegawai(this.value)">
             </div>
 
-            <div style="background: var(--bg-surface-subtle); padding: 7px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
-                <label style="font-weight: 600; font-size: 12px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 6px; margin: 0;">
-                    <input type="checkbox" id="checkAllManual" onchange="toggleCheckAllManual()" style="width: 14px; height: 14px; accent-color: var(--brand-accent);"> 
-                    Centang Semua Pegawai
+            <div class="drawer-checkall-bar">
+                <label style="font-weight: 600; font-size: 12px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 7px; margin: 0;">
+                    <input type="checkbox" id="checkAllManual" onchange="toggleCheckAllManual()" style="width: 14px; height: 14px; accent-color: var(--brand-blue); cursor: pointer;"> 
+                    Centang Semua Pegawai dan PPNPN
                 </label>
             </div>
 
             <div class="manual-checkbox-list" id="checkboxPegawaiList" style="flex: 1; max-height: none; min-height: 180px;">
-                <span style="font-size: 11.5px; color: var(--text-muted);">Belum ada pegawai dimuat. Silakan buat kalender shift terlebih dahulu di tab 'Impor & Sinkronisasi'.</span>
+                <span style="font-size: 11.5px; color: var(--text-muted);">Belum ada pegawai atau PPNPN dimuat. Silakan buat kalender shift terlebih dahulu di tab 'Impor & Sinkronisasi'.</span>
             </div>
         </div>
 
-        <!-- FOOTER: EKSPOR & HAPUS TERPILIH -->
+        <!-- FOOTER: HAPUS TERPILIH (CLEAN & SUBTLE DANGER) -->
         <div class="side-drawer-footer">
-            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px;">
-                Opsi Ekspor & Kelola Terpilih:
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                <button type="button" class="btn btn-excel" onclick="prosesBatchExport('excel')" style="height: 31px; font-size: 11.5px; justify-content: center;">
-                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
-                    Excel Terpilih
-                </button>
-                <button type="button" class="btn btn-pdf-indigo" onclick="prosesBatchExport('pdf_download')" style="height: 31px; font-size: 11.5px; justify-content: center;">
-                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-4h2a1.5 1.5 0 0 1 0 3H9"/></svg>
-                    PDF Terpilih
-                </button>
-            </div>
-            <button type="button" class="btn btn-hapus-pegawai" onclick="hapusPegawaiTerpilih()" style="width: 100%; height: 30px; font-size: 11.5px; justify-content: center;">
-                <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                Hapus Pegawai Terpilih
+            <button type="button" class="btn btn-hapus-pegawai" onclick="hapusPegawaiTerpilih()" style="width: 100%; height: 34px; font-size: 12px; justify-content: center;">
+                <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Hapus Pegawai dan PPNPN Terpilih
             </button>
         </div>
     </aside>
@@ -572,7 +560,7 @@
 
     <!-- MODAL RESTORE HISTORY -->
     <div class="modal-backdrop" id="modalRestore" style="display: none;">
-        <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-content" style="max-width: 840px; width: 92%;">
             <div class="modal-header">
                 <h3 style="display: flex; align-items: center; gap: 8px;">
                     <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -582,9 +570,9 @@
             </div>
             <div>
                 <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 15px; line-height: 1.4;">
-                    Pilih versi pekerjaan dari Database Cloud.
+                    Pilih versi pekerjaan dari Database Cloud untuk dipulihkan ke dashboard presensi.
                 </p>
-                <div id="historyListContainer" style="max-height: 300px; overflow-y: auto;"></div>
+                <div id="historyListContainer" style="max-height: 440px; overflow-y: auto;"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-ghost" onclick="tutupModalRestore()">Batal</button>
@@ -598,7 +586,7 @@
             <div class="modal-header">
                 <h3 style="display: flex; align-items: center; gap: 8px;">
                     <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-                    Tambah Pegawai Manual
+                    Tambah Pegawai dan PPNPN Manual
                 </h3>
                 <span class="modal-close" onclick="tutupModalPegawaiManual()">&times;</span>
             </div>
@@ -628,17 +616,17 @@
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Daftar Pegawai yang Ditambahkan:</span>
+                    <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Daftar Pegawai dan PPNPN yang Ditambahkan:</span>
                     <button type="button" class="btn btn-ghost" onclick="bukaModalBulkText()" style="border: 1px solid var(--border-subtle); height: 28px; font-size: 11.5px;">
                         <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-                        Input Banyak Pegawai (Plain Text)
+                        Input Banyak Pegawai dan PPNPN (Plain Text)
                     </button>
                 </div>
 
                 <!-- KOLOM HEADER TERSTRUKTUR -->
                 <div class="pegawai-inputs-header">
-                    <div>ID Pegawai</div>
-                    <div>Nama Lengkap</div>
+                    <div>ID Pegawai / PPNPN</div>
+                    <div>Nama Lengkap Pegawai / PPNPN</div>
                     <div>Kategori</div>
                     <div style="text-align: center;">Aksi</div>
                 </div>
@@ -646,7 +634,7 @@
                 <div id="pegawaiInputContainer">
                     <div class="pegawai-row-input">
                         <input type="text" placeholder="Contoh: 101" class="input-modal-id">
-                        <input type="text" placeholder="Nama Lengkap Pegawai" class="input-modal-nama">
+                        <input type="text" placeholder="Nama Lengkap Pegawai / PPNPN" class="input-modal-nama">
                         <select class="input-modal-role">
                             <option value="">-- Kategori --</option>
                             <option value="STAFF">STAFF</option>
@@ -672,7 +660,7 @@
                 <button type="button" class="btn btn-ghost" onclick="tutupModalPegawaiManual()">Batal</button>
                 <button type="button" class="btn btn-excel" onclick="simpanPegawaiManualPopUp()">
                     <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                    Simpan Pegawai
+                    Simpan Pegawai dan PPNPN
                 </button>
             </div>
         </div>
@@ -684,13 +672,13 @@
             <div class="modal-header">
                 <h3 style="display: flex; align-items: center; gap: 8px;">
                     <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-                    Input Banyak Pegawai (Plain Text)
+                    Input Banyak Pegawai dan PPNPN (Plain Text)
                 </h3>
                 <span class="modal-close" onclick="tutupModalBulkText()">&times;</span>
             </div>
             <div>
                 <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">
-                    Tempelkan (Paste) daftar pegawai dengan format <b>[ID] [NAMA LENGKAP]</b> (1 baris per pegawai).
+                    Tempelkan (Paste) daftar Pegawai dan PPNPN dengan format <b>[ID] [NAMA LENGKAP]</b> (1 baris per pegawai).
                 </p>
                 <div style="background: var(--bg-surface-subtle); padding: 10px; border-radius: var(--radius-sm); font-size: 11px; color: var(--text-secondary); margin-bottom: 10px; border: 1px dashed var(--border-subtle);">
                     <b>Contoh Format:</b><br>

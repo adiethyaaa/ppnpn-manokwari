@@ -31,7 +31,7 @@ function resetFormModalPegawai() {
     container.innerHTML = `
         <div class="pegawai-row-input">
             <input type="text" placeholder="Contoh: 101" class="input-modal-id">
-            <input type="text" placeholder="Nama Lengkap Pegawai" class="input-modal-nama">
+            <input type="text" placeholder="Nama Lengkap Pegawai / PPNPN" class="input-modal-nama">
             <select class="input-modal-role">
                 <option value="">-- Kategori --</option>
                 <option value="STAFF">STAFF</option>
@@ -58,7 +58,7 @@ function tambahBarisInputModal(id = '', nama = '', role = '') {
     div.className = 'pegawai-row-input';
     div.innerHTML = `
         <input type="text" placeholder="Contoh: 101" class="input-modal-id" value="${id}">
-        <input type="text" placeholder="Nama Lengkap Pegawai" class="input-modal-nama" value="${nama}">
+        <input type="text" placeholder="Nama Lengkap Pegawai / PPNPN" class="input-modal-nama" value="${nama}">
         <select class="input-modal-role">
             <option value="" ${role === '' ? 'selected' : ''}>-- Kategori --</option>
             <option value="STAFF" ${role === 'STAFF' ? 'selected' : ''}>STAFF</option>
@@ -85,7 +85,7 @@ function hapusBarisInputModal(btn) {
 function prosesBulkTextToRows() {
     let rawText = document.getElementById('bulkTextarea').value.trim();
     if (!rawText) {
-        alert("Silakan tempel atau ketikkan daftar pegawai terlebih dahulu.");
+        alert("Silakan tempel atau ketikkan daftar Pegawai dan PPNPN terlebih dahulu.");
         return;
     }
 
@@ -170,12 +170,12 @@ function simpanPegawaiManualPopUp() {
     });
 
     if (validRowsCount === 0) {
-        alert("Mohon lengkapi minimal 1 data ID dan Nama Pegawai.");
+        alert("Mohon lengkapi minimal 1 data ID dan Nama Pegawai / PPNPN.");
         return;
     }
 
     if (hasErrorRole) {
-        alert("Kategori pegawai belum dipilih lengkap. Mohon tentukan Kategori (Staff / Satpam / Magang) untuk semua pegawai sebelum menyimpan.");
+        alert("Kategori Pegawai dan PPNPN belum dipilih lengkap. Mohon tentukan Kategori (Staff / Satpam / Magang) untuk semua data sebelum menyimpan.");
         return;
     }
 
@@ -227,6 +227,6 @@ function simpanPegawaiManualPopUp() {
         let secManualWrapper = document.getElementById('sectionManualWrapper');
         if (secManualWrapper) secManualWrapper.style.display = 'block';
         tutupModalPegawaiManual();
-        alert(`Berhasil menambahkan ${addedCount} pegawai untuk periode ${BULAN_INDO[selectedBulan]} ${selectedTahun}.`);
+        alert(`Berhasil menambahkan ${addedCount} Pegawai dan PPNPN untuk periode ${BULAN_INDO[selectedBulan]} ${selectedTahun}.`);
     }
 }
