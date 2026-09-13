@@ -1,7 +1,7 @@
 // --- SIMPAN KE FIREBASE DATABASE ---
 function saveToHistory(isSilent = false) {
     if (!globalRekap || Object.keys(globalRekap).length === 0) {
-        if (!isSilent) alert("Tidak ada data presensi yang sedang dikerjakan untuk disimpan!");
+        if (!isSilent) alert("Belum ada data presensi yang sedang dikerjakan untuk disimpan ke cloud.");
         return false;
     }
     
@@ -74,13 +74,13 @@ function saveToHistory(isSilent = false) {
     if (typeof db !== "undefined" && db) {
         db.ref('history/' + timestamp).set(currentState, function(err) {
             if (err) {
-                if (!isSilent) alert("❌ Gagal menyimpan riwayat: " + err.message);
+                if (!isSilent) alert("Terjadi kendala saat menyimpan riwayat: " + err.message);
             } else {
-                if (!isSilent) alert(`✅ Riwayat pekerjaan berhasil disimpan oleh [ ${namaUserFix} ]!`);
+                if (!isSilent) alert(`Riwayat pekerjaan berhasil disimpan ke cloud oleh ${namaUserFix}.`);
             }
         });
     } else {
-        if (!isSilent) alert("❌ Koneksi Firebase (db) tidak ditemukan!");
+        if (!isSilent) alert("Koneksi ke database belum terhubung. Silakan periksa jaringan Anda.");
         return false;
     }
 
@@ -170,26 +170,28 @@ async function openRestoreModal() {
                 let btnHapusHtml = "";
                 if (isAdmin) {
                     btnHapusHtml = `
-                        <button onclick="mintaKonfirmasiHapusHistory('${item.id}', '${timeStampDisplay}')" title="Hapus Riwayat" style="background: #e74c3c; color: white; border: none; padding: 6px 10px; font-size: 11px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: all 0.2s;" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">
-                            🗑️
+                        <button onclick="mintaKonfirmasiHapusHistory('${item.id}', '${timeStampDisplay}')" title="Hapus Riwayat" class="btn btn-hapus-pegawai" style="height: 25px; padding: 0 7px; font-size: 11px;">
+                            <svg style="vertical-align:middle;" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         </button>
                     `;
                 }
 
-                div.style.cssText = `display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-bottom: 1px solid #ddd; background: #ffffff; margin-bottom: 8px; border-radius: 6px; border-left: 5px solid ${borderLeftColor}; box-shadow: 0 2px 4px rgba(0,0,0,0.03);`;
+                div.style.cssText = `display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--border-subtle); background: #ffffff; margin-bottom: 5px; border-radius: var(--radius-sm); border-left: 3.5px solid ${borderLeftColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.03); font-size: 12px; transition: background 0.15s;`;
 
                 div.innerHTML = `
-                    <div>
-                        <div style="font-weight: bold; color: #2c3e50; font-size: 13.5px; margin-bottom: 3px;">
-                            Tersimpan: - ${timeStampDisplay} WIT<br>by ${namaUserDisplay} ${labelBadge}
-                        </div>
-                        <div style="font-size: 11.5px; color: #7f8c8d;">
-                            Periode: <b style="color:#34495e;">${periodeDisplay}</b> | Total Pegawai: <b>${countPegawai}</b>
-                        </div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        <span style="font-weight: 700; color: var(--text-primary); font-size: 12px;">${timeStampDisplay} WIT</span>
+                        <span style="color: var(--text-muted); font-size: 11px;">•</span>
+                        <span style="color: var(--text-secondary); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis;" title="${namaUserDisplay}">${namaUserDisplay}</span>
+                        ${labelBadge}
+                        <span style="color: var(--text-muted); font-size: 11px;">•</span>
+                        <span style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; color: var(--text-primary);">${periodeDisplay}</span>
+                        <span style="color: var(--text-muted); font-size: 11px;">(${countPegawai} peg.)</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <button class="btn-simpan" style="background:#8e44ad; color:white; border:none; padding: 7px 12px; font-size: 11.5px; border-radius: 4px; cursor:pointer;" onclick="restoreFromFirebase('${item.id}')">
-                            Pilih & Restore
+                    <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: 10px;">
+                        <button class="btn btn-restore-history" style="height: 25px; padding: 0 9px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" onclick="restoreFromFirebase('${item.id}')" title="Pulihkan data checkpoint ini">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                            Restore
                         </button>
                         ${btnHapusHtml}
                     </div>
@@ -206,11 +208,11 @@ async function openRestoreModal() {
 // --- RESTORE DATA SPESIFIK DARI FIREBASE (DENGAN PROGRESS BAR) ---
 function restoreFromFirebase(timestampId) {
     if (!timestampId) {
-        alert("⚠️ ID Data History tidak valid!");
+        alert("ID data riwayat tidak valid.");
         return;
     }
 
-    if (!confirm("⚠️ PERHATIAN:\n\nMe-restore history akan MENIMPA pekerjaan Anda yang ada di layar saat ini. Yakin ingin melanjutkan?")) {
+    if (!confirm("Memulihkan riwayat ini akan menggantikan tampilan data saat ini dengan data yang tersimpan di cloud. Apakah Anda ingin melanjutkan?")) {
         return;
     }
 
@@ -247,22 +249,22 @@ function restoreFromFirebase(timestampId) {
 
     if (!dbRef) {
         if (modalProgress) modalProgress.style.display = "none";
-        alert("❌ Koneksi Firebase belum siap!");
+        alert("Koneksi ke database belum siap. Silakan coba beberapa saat lagi.");
         return;
     }
 
     setTimeout(() => {
-        updateProgress(40, "Mengunduh snapshot data history...");
+        updateProgress(40, "Mengunduh snapshot data riwayat...");
 
         dbRef.ref('history/' + timestampId).once('value')
             .then((snapshot) => {
                 let selectedState = snapshot.val();
 
                 if (!selectedState) {
-                    throw new Error("Data riwayat tidak ditemukan di Database!");
+                    throw new Error("Data riwayat tidak ditemukan di Database.");
                 }
 
-                updateProgress(70, "Memulihkan variabel & state pekerjaan...");
+                updateProgress(70, "Memulihkan variabel & status pekerjaan...");
 
                 setTimeout(() => {
                     updateProgress(90, "Menderetkan data ke tabel utama...");
@@ -293,15 +295,17 @@ function restoreFromFirebase(timestampId) {
                         if (secManual) secManual.style.display = 'none';
                     }
 
-                    // D. Jalankan Fungsi Render UI Bawaan Anda
+                    // D. Jalankan Fungsi Render UI Bawaan & Otomatis Buka Tab Presensi
                     if (typeof updateCheckboxPegawaiManual === "function") updateCheckboxPegawaiManual();
                     if (typeof updateFilterNamaDropdown === "function") updateFilterNamaDropdown();
                     if (typeof renderTabel === "function") renderTabel();
+                    if (typeof switchTab === "function") switchTab("tab-presensi");
 
                     setTimeout(() => {
                         updateProgress(100, "Selesai!");
+                        if (typeof switchTab === "function") switchTab("tab-presensi");
 
-                        // 💡 MODAL LANGSUNG TERTUTUP HALUS TANPA PESAN ALERT
+                        // 💡 Modal loading progress langsung tertutup halus
                         setTimeout(() => {
                             if (modalProgress) modalProgress.style.display = "none";
                         }, 300);
@@ -312,7 +316,7 @@ function restoreFromFirebase(timestampId) {
             .catch((err) => {
                 console.error("Error Restore History:", err);
                 if (modalProgress) modalProgress.style.display = "none";
-                alert("❌ Terjadi kesalahan: " + err.message);
+                alert("Terjadi kendala saat memulihkan riwayat: " + err.message);
             });
     }, 200);
 }
@@ -359,11 +363,10 @@ function eksekusiHapusHistoryFirebase() {
         return;
     }
 
-    let originalText = "🗑️ Ya, Hapus Permanen";
+    let originalText = btnConfirm ? btnConfirm.innerHTML : "Ya, Hapus Permanen";
     if (btnConfirm) {
-        originalText = btnConfirm.innerHTML;
         btnConfirm.disabled = true;
-        btnConfirm.innerHTML = "⏳ Menghapus...";
+        btnConfirm.innerHTML = "Menghapus...";
     }
 
     // Eksekusi Hapus dari Node 'history/{historyId}' Firebase
@@ -548,7 +551,7 @@ window.saveReportFinal = function() {
         const btnFinal = document.getElementById("btnSaveReportFinal") || document.querySelector("button[onclick*='saveReportFinal']");
         if (btnFinal) {
             btnFinal.disabled = false;
-            btnFinal.innerHTML = "🏆 Save Report Final";
+            btnFinal.innerHTML = '<svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Save Report Final';
         }
     }
 };
@@ -627,7 +630,7 @@ window.openFinalHistoryModal = function() {
                 container.innerHTML = 
                     "<div style='text-align:center; padding: 25px; color: #7f8c8d; font-style: italic; border: 1px dashed #ccc; border-radius: 6px; background: #fafafa;'>" +
                         "Belum ada Rekap Final Presensi yang disimpan.<br>" +
-                        "<small style='font-size:11px; color:#a0a0a0;'>Gunakan tombol <b>🏆 Save Report Final</b> di bawah tabel jika data bulan tersebut sudah bersih.</small>" +
+                        "<small style='font-size:11px; color:#a0a0a0;'>Gunakan tombol <b>Save Report Final</b> di bawah tabel jika data bulan tersebut sudah bersih.</small>" +
                     "</div>";
             } else {
                 finalDataUnique.forEach(function(item) {
@@ -646,7 +649,7 @@ window.openFinalHistoryModal = function() {
                     div.innerHTML = 
                         "<div>" +
                             "<div style='font-weight: bold; color: #2c3e50; font-size: 13.5px; margin-bottom: 3px;'>" +
-                                "🏆 " + titleDisplay +
+                                titleDisplay +
                             "</div>" +
                             "<div style='font-size: 11px; color: #7f8c8d;'>" +
                                 "Diperbarui: <span style='color: #34495e; font-weight: 500;'>" + timeStampDisplay + "</span> (" + savedByDisplay + ")" +

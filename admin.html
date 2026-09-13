@@ -18,18 +18,22 @@
 <body>
     <div class="admin-wrapper">
         <!-- HEADER ADMIN DENGAN TOMBOL SERASI -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 15px; flex-wrap: wrap; gap: 10px;">
             <div>
-                <h2 style="margin: 0; color: #2c3e50; font-size: 20px;">⚙️ Kelola Pengguna & Hak Akses Fitur</h2>
-                <small style="color: #7f8c8d;">Pengaturan Administrator Kantor Regional XIV BKN Manokwari</small>
+                <h2 style="margin: 0; color: var(--text-primary); font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    Kelola Pengguna & Hak Akses Fitur
+                </h2>
+                <small style="color: var(--text-secondary); font-size: 12px;">Pengaturan Administrator Kantor Regional XIV BKN Manokwari</small>
             </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <a href="dashboard.html" class="btn-dashboard-back">
-                    ⬅ Ke Dashboard
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <a href="dashboard.html" class="btn btn-ghost" style="border: 1px solid var(--border-subtle); display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                    Ke Dashboard
                 </a>
-                <!-- Ubah onclick di sini -->
-                <button onclick="mintaKonfirmasiLogoutAdmin()" class="btn-pdf" style="margin: 0; padding: 8px 14px; font-size: 12px; border-radius: 5px;">
-                    🚪 Logout
+                <button onclick="mintaKonfirmasiLogoutAdmin()" class="btn btn-pdf" style="height: 31px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Logout
                 </button>
             </div>
         </div>
@@ -73,14 +77,17 @@
                 </div>
             </div>
 
-            <div style="margin-top: 15px; text-align: right;">
-                <button class="btn-reset" onclick="resetFormAdmin()">Batal / Reset</button>
-                <button class="btn-excel" onclick="simpanUserFirebase()">💾 Simpan User & Akses</button>
+            <div style="margin-top: 15px; text-align: right; display: flex; justify-content: flex-end; gap: 8px;">
+                <button class="btn btn-ghost" onclick="resetFormAdmin()">Batal / Reset</button>
+                <button class="btn btn-excel" onclick="simpanUserFirebase()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Simpan User & Akses
+                </button>
             </div>
         </div>
 
         <!-- DAFTAR USER -->
-        <h3 style="color: #2c3e50;">Daftar Pengguna Aplikasi</h3>
+        <h3 style="color: var(--text-primary); font-size: 15px; margin-top: 24px; margin-bottom: 12px;">Daftar Pengguna Aplikasi</h3>
         <table>
             <thead>
                 <tr>
@@ -97,18 +104,20 @@
 
     <!-- MODAL KONFIRMASI LOGOUT ADMIN -->
     <div class="modal-backdrop" id="modalLogoutAdmin" style="display: none;">
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
-            <div style="font-size: 42px; margin-bottom: 10px;">🚪</div>
-            <h3 style="margin: 0 0 10px 0; color: #2c3e50;">Konfirmasi Logout</h3>
-            <p style="font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 20px;">
+        <div class="modal-content" style="max-width: 380px; text-align: center;">
+            <div style="margin-bottom: 12px; color: var(--color-danger);">
+                <svg class="icon-svg" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </div>
+            <h3 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 16px; font-weight: 700;">Konfirmasi Logout</h3>
+            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 18px;">
                 Apakah Anda yakin ingin keluar dari halaman Administrator?
             </p>
             
-            <div style="display: flex; gap: 10px; justify-content: center;">
-                <button type="button" class="btn-pdf" id="btnConfirmLogoutAdmin" style="flex: 1; padding: 10px; font-size: 13px; font-weight: bold; margin: 0; border-radius: 5px; background-color: #e74c3c;" onclick="prosesLogoutAdminDenganSpinner()">
+            <div style="display: flex; gap: 8px; justify-content: center;">
+                <button type="button" class="btn btn-pdf" id="btnConfirmLogoutAdmin" style="flex: 1; height: 34px; font-size: 12px;" onclick="prosesLogoutAdminDenganSpinner()">
                     Ya, Logout
                 </button>
-                <button type="button" class="btn-reset" style="flex: 1; padding: 10px; font-size: 13px; font-weight: bold; margin: 0; border-radius: 5px;" onclick="tutupModalLogoutAdmin()">
+                <button type="button" class="btn btn-ghost" style="flex: 1; height: 34px; font-size: 12px;" onclick="tutupModalLogoutAdmin()">
                     Batal
                 </button>
             </div>

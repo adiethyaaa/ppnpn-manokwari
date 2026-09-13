@@ -30,15 +30,15 @@ function resetFormModalPegawai() {
     let container = document.getElementById('pegawaiInputContainer');
     container.innerHTML = `
         <div class="pegawai-row-input">
-            <input type="text" placeholder="ID Pegawai" class="input-modal-id">
-            <input type="text" placeholder="Nama Lengkap" class="input-modal-nama">
-            <select class="input-modal-role" style="max-width: 130px;">
+            <input type="text" placeholder="Contoh: 101" class="input-modal-id">
+            <input type="text" placeholder="Nama Lengkap Pegawai" class="input-modal-nama">
+            <select class="input-modal-role">
                 <option value="">-- Kategori --</option>
                 <option value="STAFF">STAFF</option>
                 <option value="SATPAM">SATPAM</option>
                 <option value="MAGANG">MAGANG</option>
             </select>
-            <button type="button" class="btn-hapus" onclick="hapusBarisInputModal(this)">✕</button>
+            <button type="button" class="btn-hapus" onclick="hapusBarisInputModal(this)" title="Hapus baris ini">✕</button>
         </div>
     `;
 }
@@ -57,15 +57,15 @@ function tambahBarisInputModal(id = '', nama = '', role = '') {
     let div = document.createElement('div');
     div.className = 'pegawai-row-input';
     div.innerHTML = `
-        <input type="text" placeholder="ID Pegawai" class="input-modal-id" value="${id}">
-        <input type="text" placeholder="Nama Lengkap" class="input-modal-nama" value="${nama}">
-        <select class="input-modal-role" style="max-width: 130px;">
+        <input type="text" placeholder="Contoh: 101" class="input-modal-id" value="${id}">
+        <input type="text" placeholder="Nama Lengkap Pegawai" class="input-modal-nama" value="${nama}">
+        <select class="input-modal-role">
             <option value="" ${role === '' ? 'selected' : ''}>-- Kategori --</option>
             <option value="STAFF" ${role === 'STAFF' ? 'selected' : ''}>STAFF</option>
             <option value="SATPAM" ${role === 'SATPAM' ? 'selected' : ''}>SATPAM</option>
             <option value="MAGANG" ${role === 'MAGANG' ? 'selected' : ''}>MAGANG</option>
         </select>
-        <button type="button" class="btn-hapus" onclick="hapusBarisInputModal(this)">✕</button>
+        <button type="button" class="btn-hapus" onclick="hapusBarisInputModal(this)" title="Hapus baris ini">✕</button>
     `;
     container.appendChild(div);
 }
@@ -85,7 +85,7 @@ function hapusBarisInputModal(btn) {
 function prosesBulkTextToRows() {
     let rawText = document.getElementById('bulkTextarea').value.trim();
     if (!rawText) {
-        alert("Harap masukkan/tempelkan teks daftar pegawai terlebih dahulu!");
+        alert("Silakan tempel atau ketikkan daftar pegawai terlebih dahulu.");
         return;
     }
 
@@ -123,12 +123,12 @@ function prosesBulkTextToRows() {
     });
 
     if (invalidLines.length > 0) {
-        alert(`❌ FORMAT PENULISAN SALAH!\n\nTerdeteksi ${invalidLines.length} baris tidak sesuai format [ID] [NAMA]:\n\n` + invalidLines.slice(0, 5).join('\n') + (invalidLines.length > 5 ? '\n...' : '') + `\n\nSilakan perbaiki format penulisan dan coba lagi.`);
+        alert(`Format penulisan belum sesuai pada ${invalidLines.length} baris berikut:\n\n` + invalidLines.slice(0, 5).join('\n') + (invalidLines.length > 5 ? '\n...' : '') + `\n\nMohon pastikan format menggunakan: [ID] [NAMA PEGAWAI]`);
         return;
     }
 
     if (parsedData.length === 0) {
-        alert("Tidak ada data pegawai valid yang berhasil diproses.");
+        alert("Tidak ditemukan data pegawai yang sesuai format. Silakan periksa kembali teks yang dimasukkan.");
         return;
     }
 
@@ -145,7 +145,7 @@ function prosesBulkTextToRows() {
     });
 
     tutupModalBulkText();
-    alert(`✅ Berhasil memasukkan ${parsedData.length} pegawai ke form! Silakan pilih Kategori (Staff/Satpam/Magang) untuk masing-masing pegawai, lalu klik Simpan Pegawai.`);
+    alert(`Berhasil memasukkan ${parsedData.length} pegawai ke form. Silakan tentukan Kategori untuk masing-masing pegawai, lalu klik 'Simpan Pegawai'.`);
 }
 
 function simpanPegawaiManualPopUp() {
@@ -170,12 +170,12 @@ function simpanPegawaiManualPopUp() {
     });
 
     if (validRowsCount === 0) {
-        alert("Harap isi minimal 1 ID dan Nama Pegawai!");
+        alert("Mohon lengkapi minimal 1 data ID dan Nama Pegawai.");
         return;
     }
 
     if (hasErrorRole) {
-        alert("❌ EROR: Kategori pegawai belum dipilih!\n\nHarap pilih Kategori (STAFF / SATPAM / MAGANG) untuk semua pegawai sebelum menyimpan.");
+        alert("Kategori pegawai belum dipilih lengkap. Mohon tentukan Kategori (Staff / Satpam / Magang) untuk semua pegawai sebelum menyimpan.");
         return;
     }
 
@@ -224,8 +224,9 @@ function simpanPegawaiManualPopUp() {
         updateFilterNamaDropdown();
         renderTabel();
         document.getElementById('sectionPresensi').style.display = 'block';
-        document.getElementById('sectionManualWrapper').style.display = 'block';
+        let secManualWrapper = document.getElementById('sectionManualWrapper');
+        if (secManualWrapper) secManualWrapper.style.display = 'block';
         tutupModalPegawaiManual();
-        alert(`✅ Berhasil menambahkan ${addedCount} pegawai untuk periode ${BULAN_INDO[selectedBulan]} ${selectedTahun}!`);
+        alert(`Berhasil menambahkan ${addedCount} pegawai untuk periode ${BULAN_INDO[selectedBulan]} ${selectedTahun}.`);
     }
 }

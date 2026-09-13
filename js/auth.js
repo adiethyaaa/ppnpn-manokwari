@@ -255,7 +255,7 @@ function logoutWithSave(shouldSave) {
 // Gunakan properti window agar aman dari duplicate declaration error
 window.inactivityTimer = window.inactivityTimer || null;
 window.countdownInterval = window.countdownInterval || null;
-window.INACTIVITY_LIMIT_SECONDS = 3 * 60; // timer 3 Menit (180 Detik)
+window.INACTIVITY_LIMIT_SECONDS = 15 * 60; // timer 15 Menit (900 Detik)
 window.secondsRemaining = window.secondsRemaining || window.INACTIVITY_LIMIT_SECONDS;
 
 // Fungsi untuk mereset dan menjalankan ulang timer
@@ -304,12 +304,60 @@ function updateTimerDisplay() {
     const formattedSeconds = String(seconds).padStart(2, '0');
 
     elDisplay.innerText = `${formattedMinutes}:${formattedSeconds}`;
+
+    // Update pill styling jika < 1 menit (peringatan sesi)
+    const pill = document.getElementById("sessionTimerPill") || elDisplay.closest(".session-timer-pill");
+    if (pill) {
+        if (minutes < 1) {
+            pill.classList.add("warning");
+        } else {
+            pill.classList.remove("warning");
+        }
+    }
+}
+
+// =========================================================
+// JAM REALTIME (WIT - MANOKWARI, PAPUA BARAT)
+// =========================================================
+function startRealtimeClock() {
+    function tick() {
+        const now = new Date();
+        const clockEl = document.getElementById("liveClockDisplay");
+        const dateEl = document.getElementById("liveDateDisplay");
+
+        if (clockEl) {
+            const timeOptions = {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+                timeZone: 'Asia/Jayapura'
+            };
+            clockEl.innerText = now.toLocaleTimeString('id-ID', timeOptions) + " WIT";
+        }
+
+        if (dateEl) {
+            const dateOptions = {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                timeZone: 'Asia/Jayapura'
+            };
+            dateEl.innerText = now.toLocaleDateString('id-ID', dateOptions);
+        }
+    }
+
+    tick();
+    setInterval(tick, 1000);
 }
 
 // Event Listener DOMContentLoaded
-// Event Listener DOMContentLoaded
 document.addEventListener("DOMContentLoaded", () => {
-    // 💡 Deteksi Halaman Login secara presisi (termasuk root URL GitHub Pages)
+    // Jalankan jam realtime di seluruh halaman
+    startRealtimeClock();
+
+    // Deteksi Halaman Login secara presisi (termasuk root URL GitHub Pages)
     const currentPath = window.location.pathname;
     const isLoginPage = currentPath.endsWith("/") || 
                         currentPath.endsWith("index.html") || 
@@ -318,7 +366,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // TIMER HANYA DIJALANKAN JIKA BUKAN HALAMAN LOGIN
     if (!isLoginPage) {
         
-        // 1. Tampilkan Username di Label Timer
+        // 1. Tampilkan Info User di Header Atas
         let activeUser = null;
         if (typeof currentUser !== "undefined" && currentUser) {
             activeUser = currentUser;
@@ -332,17 +380,47 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (activeUser) {
-            const usernameDisplay = activeUser.username || activeUser.nama || "User";
+            const usernameDisplay = activeUser.nama || activeUser.username || "User";
             const elLabel = document.getElementById("lblSessionUsername");
             if (elLabel) elLabel.innerText = usernameDisplay;
+
+            const elDropdownName = document.getElementById("dropdownUserName");
+            if (elDropdownName) elDropdownName.innerText = usernameDisplay;
+
+            const elAvatar = document.getElementById("userAvatarInitials");
+            if (elAvatar) {
+                elAvatar.innerText = usernameDisplay.charAt(0).toUpperCase();
+            }
+
+            const elRole = document.getElementById("lblSessionRole");
+            if (elRole) {
+                const roleName = (activeUser.role === "administrator") ? "Administrator" : "Operator";
+                elRole.innerText = roleName;
+                elRole.className = `user-role-badge ${activeUser.role === 'administrator' ? 'role-admin' : 'role-operator'}`;
+            }
+
+            const elUnit = document.getElementById("lblSessionUnit");
+            if (elUnit) {
+                elUnit.innerText = activeUser.unitKerja || "Kanreg XIV";
+            }
+
+            // Tampilkan tombol kelola admin di dropdown jika administrator
+            const btnAdminHeader = document.getElementById("btnHeaderAdmin");
+            if (btnAdminHeader) {
+                if (activeUser.role === "administrator") {
+                    btnAdminHeader.style.display = "flex";
+                } else {
+                    btnAdminHeader.style.display = "none";
+                }
+            }
         }
 
         // 2. Jalankan Timer Sesi
         resetInactivityTimer();
         
-        // 3. Reset Timer hanya pada event Klik / Touch
-        const clickEvents = ["click", "touchstart"];
-        clickEvents.forEach((eventType) => {
+        // 3. Reset Timer hanya pada event Klik / Touch / Keydown
+        const resetEvents = ["click", "touchstart", "keydown"];
+        resetEvents.forEach((eventType) => {
             document.addEventListener(eventType, () => {
                 resetInactivityTimer();
             }, { passive: true });
@@ -351,7 +429,36 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // =========================================================
-// 5. UI & SCROLL HANDLERS
+// 5. USER PROFILE DROPDOWN TOGGLE
+// =========================================================
+
+function toggleUserDropdown(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const menu = document.getElementById("userDropdownMenu");
+    const btn = document.getElementById("btnUserDropdownToggle");
+    if (!menu) return;
+
+    const isVisible = menu.style.display === "block";
+    menu.style.display = isVisible ? "none" : "block";
+    if (btn) btn.setAttribute("aria-expanded", !isVisible);
+}
+
+// Tutup dropdown jika klik di luar
+document.addEventListener("click", (e) => {
+    const dropdownContainer = document.querySelector(".user-dropdown-container");
+    const menu = document.getElementById("userDropdownMenu");
+    const btn = document.getElementById("btnUserDropdownToggle");
+    if (dropdownContainer && !dropdownContainer.contains(e.target) && menu) {
+        menu.style.display = "none";
+        if (btn) btn.setAttribute("aria-expanded", "false");
+    }
+});
+
+// =========================================================
+// 6. UI & SCROLL HANDLERS
 // =========================================================
 
 function scrollToTop() {
@@ -360,31 +467,34 @@ function scrollToTop() {
 
 window.onscroll = function() {
     let btnScrollTop = document.getElementById("btnScrollTop");
-    let btnLogout = document.getElementById("btnLogoutFloating");
-    let btnAdmin = document.getElementById("btnKelolaAdmin");
-    let btnHistory = document.getElementById("btnHistoryFloating");
-    let timerWidget = document.getElementById("sessionTimerFloating");
-    
     let scrollTopVal = document.body.scrollTop || document.documentElement.scrollTop;
 
     // Tombol Scroll ke Atas Muncul Jika Jauh ke Bawah
     if (btnScrollTop) {
-        btnScrollTop.style.display = (scrollTopVal > 200) ? "block" : "none";
+        btnScrollTop.style.display = (scrollTopVal > 250) ? "block" : "none";
     }
-
-    // Helper Untuk Menyembunyikan Elemen Saat di Scroll Ke Bawah
-    const toggleFloating = (elem) => {
-        if (elem) {
-            if (scrollTopVal > 50) {
-                elem.classList.add("hidden-on-scroll");
-            } else {
-                elem.classList.remove("hidden-on-scroll");
-            }
-        }
-    };
-
-    toggleFloating(btnLogout);
-    toggleFloating(btnAdmin);
-    toggleFloating(btnHistory);
-    toggleFloating(timerWidget);
 };
+
+// Handler klik di luar modal logout dan ESC key
+document.addEventListener("click", (e) => {
+    if (e.target && e.target.classList && e.target.classList.contains("modal-backdrop")) {
+        if (e.target.id === "modalLogoutAdmin" && typeof tutupModalLogoutAdmin === "function") {
+            tutupModalLogoutAdmin();
+        } else if (e.target.id === "modalLogout" && typeof tutupModalLogout === "function") {
+            tutupModalLogout();
+        }
+    }
+});
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" || e.key === "Esc") {
+        const modalAdmin = document.getElementById("modalLogoutAdmin");
+        if (modalAdmin && modalAdmin.style.display !== "none" && typeof tutupModalLogoutAdmin === "function") {
+            tutupModalLogoutAdmin();
+        }
+        const modalLogout = document.getElementById("modalLogout");
+        if (modalLogout && modalLogout.style.display !== "none" && typeof tutupModalLogout === "function") {
+            tutupModalLogout();
+        }
+    }
+});

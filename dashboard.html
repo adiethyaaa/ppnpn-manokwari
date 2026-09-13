@@ -32,273 +32,538 @@
     </style>
 </head>
 <body>
-    <!-- WIDGET TIMER SESI MENGAMBANG (KIRI ATAS) -->
-    <div id="sessionTimerFloating" class="timer-floating">
-        ⏳ Sesi Aktif untuk <span id="lblSessionUsername" style="color: #2ecc71; font-weight: 700;">User</span>: <span id="timerCountdown">5:00</span>
-    </div>
+    <!-- TOP EXECUTIVE NAVBAR / APP HEADER -->
+    <header class="app-top-header">
+        <div class="header-inner">
+            <!-- BRAND IDENTITY (KIRI) -->
+            <div class="header-brand" id="topHeader">
+                <div class="brand-logos">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Logo_Badan_Kepegawaian_Negara.png/960px-Logo_Badan_Kepegawaian_Negara.png" alt="Logo BKN" id="logoBknHeader" class="brand-logo-img">
+                    <img src="https://webinar.tu-kanreg14.id/assets/img/logo_kasuari.png" alt="Logo Kasuari" id="logoKasuariHeader" class="brand-logo-img">
+                </div>
+                <div class="brand-info">
+                    <div class="brand-title-row">
+                        <h1 class="brand-title">Laporan Kehadiran Pegawai</h1>
+                        <span class="version-pill">v.15</span>
+                    </div>
+                    <span class="brand-subtitle">Kantor Regional XIV BKN Manokwari</span>
+                </div>
+            </div>
+
+            <!-- CENTER: REALTIME LIVE CLOCK & PERIODE WIDGET (KETENGAH / 1 BARIS) -->
+            <div class="header-center-widget">
+                <div class="live-clock-badge">
+                    <span class="clock-pulse-dot" title="Realtime Ticker"></span>
+                    <span id="liveClockDisplay" class="live-clock-time">--:--:-- WIT</span>
+                </div>
+                <div class="live-clock-divider"></div>
+                <div class="live-date-info">
+                    <span id="liveDateDisplay" class="live-date-text">Memuat Waktu...</span>
+                    <span id="periodeText" class="live-periode-text">Periode: -</span>
+                </div>
+            </div>
+
+            <!-- RIGHT: USER PROFILE INTERACTIVE DROPDOWN (POJOK KANAN ATAS) -->
+            <div class="header-user-section">
+                <div class="user-dropdown-container">
+                    <button type="button" class="user-profile-badge-btn" id="btnUserDropdownToggle" onclick="toggleUserDropdown(event)" aria-haspopup="true" aria-expanded="false" title="Menu Pengguna">
+                        <div class="user-avatar-circle" id="userAvatarInitials">U</div>
+                        <div class="user-badge-text">
+                            <span class="user-name-label" id="lblSessionUsername">User</span>
+                            <span class="user-role-badge role-operator" id="lblSessionRole">Operator</span>
+                        </div>
+                        <svg class="icon-svg chevron-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+
+                    <!-- DROPDOWN MENU -->
+                    <div class="user-dropdown-menu" id="userDropdownMenu" style="display: none;">
+                        <div class="dropdown-header">
+                            <div class="dropdown-user-name" id="dropdownUserName">User</div>
+                            <div class="dropdown-user-unit" id="lblSessionUnit">Kanreg XIV</div>
+                        </div>
+                        <div class="dropdown-session-box">
+                            <span class="dropdown-session-text">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                Sesi Aktif:
+                            </span>
+                            <span class="dropdown-session-timer" id="timerCountdown">03:00</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        
+                        <!-- Item 1: Kelola Pengguna (Admin) -->
+                        <a href="admin.html" id="btnHeaderAdmin" class="dropdown-item" style="display: none;">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                            <span>Kelola Pengguna & Hak Akses</span>
+                        </a>
+
+                        <!-- Item 2: Logout -->
+                        <button type="button" class="dropdown-item dropdown-item-danger" onclick="mintaKonfirmasiLogout()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- TOP NAVIGATION TAB BAR (EXTENSIBLE MENU SYSTEM) -->
+    <nav class="app-tab-navigation-bar" aria-label="Menu Utama Aplikasi">
+        <div class="tab-nav-inner">
+            <div class="tab-nav-left">
+                <button type="button" class="nav-tab-btn active" data-tab="tab-presensi" aria-selected="true">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+                    <span>Data Presensi & Laporan</span>
+                </button>
+                <button type="button" class="nav-tab-btn" data-tab="tab-import" aria-selected="false">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>Impor & Sinkronisasi</span>
+                </button>
+                <button type="button" class="nav-tab-btn" data-tab="tab-history" aria-selected="false">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                    <span>Riwayat & Arsip Cloud</span>
+                </button>
+            </div>
+            <div class="tab-nav-right">
+                <button type="button" class="btn-tab-multi-data" id="btnTabMultiData" onclick="toggleSidePanelMassal(true)" title="Buka Panel Edit Multi Data Pegawai">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><line x1="8" y1="9" x2="11" y2="9"/><line x1="8" y1="13" x2="11" y2="13"/></svg>
+                    <span>Edit Multi Data</span>
+                </button>
+            </div>
+        </div>
+    </nav>
 
     <!-- MAIN APP CONTAINER -->
     <div id="main-app">
-        <!-- TOMBOL LOGOUT MENGAMBANG -->
-        <button id="btnLogoutFloating" class="btn-logout-floating" onclick="mintaKonfirmasiLogout()" title="Keluar dari Aplikasi">
-            🚪 Logout
-        </button>
+        <div class="tab-content-container">
 
-        <div class="container">
-            <!-- HEADER LOGO & JUDUL -->
-            <div class="app-header-title" id="topHeader">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Logo_Badan_Kepegawaian_Negara.png/960px-Logo_Badan_Kepegawaian_Negara.png" alt="Logo BKN" id="logoBknHeader">
+            <!-- =========================================================
+                 TAB 1: DATA PRESENSI & LAPORAN (PENCARIAN, FILTER & TABEL)
+                 ========================================================= -->
+            <div id="tab-presensi" class="tab-pane active">
                 
-                <div class="app-title-text">
-                    <h2>
-                        Laporan Kehadiran Pegawai<br>
-                        <span style="font-size: 18px; color: #7f8c8d;">Kantor Regional XIV BKN Manokwari</span>
-                    </h2>
-                </div>
-                
-                <img src="https://webinar.tu-kanreg14.id/assets/img/logo_kasuari.png" alt="Logo Kasuari" id="logoKasuariHeader">
-            </div>
-            
-            <div id="periodeText" class="periode-judul">Periode: -</div>
-
-            <!-- TAHAP 1: UPLOAD JADWAL SHIFT & INPUT MANUAL POPUP -->
-            <div class="section-box upload-section" style="border-color: #27ae60; background-color: #e9f7ef;">
-                <span class="section-title" style="color: #27ae60;">Langkah 1: Upload Excel Jadwal Shift Bulanan</span>
-                <div class="form-group">
-                    <input type="file" id="uploadJadwal" accept=".xls,.xlsx">
-                    <button class="btn-excel" onclick="prosesExcelJadwal()">📄 Buat Kalender Shift</button>
-                    <button class="btn-popup-manual" onclick="bukaModalPegawaiManual()">+ Input Pegawai Manual</button>
-                </div>
-            </div>
-
-            <!-- TAHAP 2: UPLOAD DATA FINGERPRINT -->
-            <div class="section-box upload-section" id="sectionPresensi" style="display: none;">
-                <span class="section-title">Langkah 2: Integrasikan / Replace Data Kehadiran</span>
-                <div class="form-group">
-                    <input type="file" id="uploadExcel" accept=".xls,.xlsx">
-                    <button class="btn-upload" onclick="prosesExcel()">➕ Tambahkan / Replace Data Kehadiran</button>
-                </div>
-                <small style="color: #e67e22; font-weight: bold;">*Mengupload file absen di sini akan secara otomatis Menimpa (Replace) data absen mesin sebelumnya yang sudah ter-upload.</small>
-            </div>
-
-            <!-- KOTAK AUDIT PRESENSI -->
-            <div id="auditContainer" class="audit-container">
-                <button class="btn-toggle-audit" id="btnToggleAudit" onclick="toggleAuditBox()">📋 Sembunyikan Area Keterangan Presensi</button>
-                
-                <div class="section-box" id="sectionAudit" style="margin-bottom:0;">
-                    <div id="auditBox" class="audit-box"></div>
-                    <div id="machineAlertBox" class="machine-alert-box" style="display: none;"></div>
-                    
-                    <div style="text-align: right;">
-                        <button class="btn-recheck" onclick="jalankanRecheck()">✓ Re-Check Presensi</button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- AREA UPDATE & DOWNLOAD MANUAL -->
-            <div id="sectionManualWrapper" style="display: none;">
-                <button class="btn-toggle-manual" id="btnToggleManual" onclick="toggleFormManual()">📂 Sembunyikan Area Update & Download Manual</button>
-                <div class="section-box" id="sectionManual">
-                    <span class="section-title" style="color: #2980b9;">Update / Download / Hapus Manual (Pilih Banyak Pegawai Sekaligus)</span>
-                    
-                    <div style="margin-bottom: 10px;">
-                        <label style="font-weight: bold; font-size: 13px; color: #2c3e50; cursor: pointer;">
-                            <input type="checkbox" id="checkAllManual" onchange="toggleCheckAllManual()" style="width: 16px; height: 16px; accent-color: #3498db; vertical-align: middle; margin-right: 5px;"> 
-                            Centang Semua Pegawai
-                        </label>
-                    </div>
-                    
-                    <div class="manual-checkbox-list" id="checkboxPegawaiList"></div>
-
-                    <div class="form-group" style="margin-top: 15px; background: #ebf5fb; padding: 12px; border-radius: 5px; border: 1px solid #aed6f1;">
-                        <span style="font-weight: bold; font-size: 13px; color: #1f618d; width: 100%;">Option 1: Update Jam Masuk / Pulang Massal</span>
-                        <input type="date" id="tanggalManual">
-                        <input type="time" id="jamManual">
-                        <select id="ketManual">
-                            <option value="masuk">Set sbg. Jam Masuk</option>
-                            <option value="pulang">Set sbg. Jam Pulang</option>
-                        </select>
-                        <button onclick="tambahDataManual()">+ Update Data Massal</button>
-                        
-                        <button id="btnUndoMassal" class="btn-undo" onclick="undoUpdateMassal()" disabled title="Kembali ke posisi sebelum update massal terakhir">↩ Undo 1 Langkah</button>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 15px; justify-content: space-between;">
+                <!-- AREA FILTER & AKSI FILE -->
+                <div class="section-box">
+                    <div class="section-header-row">
                         <div>
-                            <span style="font-weight: bold; font-size: 13px; color: #2c3e50; margin-right: 10px;">Option 2: Download / Export Pegawai Terpilih:</span>
-                            <button class="btn-excel" onclick="prosesBatchExport('excel')">⬇ Export Excel Terpilih</button>
-                            <button class="btn-pdf-indigo" onclick="prosesBatchExport('pdf_download')">📥 Export PDF Terpilih</button>
-                        </div>
-                        <div>
-                            <button class="btn-hapus-pegawai" onclick="hapusPegawaiTerpilih()">🗑 Hapus Pegawai Terpilih</button>
+                            <h3 class="section-title">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                Filter Pencarian & Ekspor Laporan
+                            </h3>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- AREA FILTER & EXPORT ALL -->
-            <div class="section-box" style="display: flex; flex-direction: column; gap: 15px;">
-                <span class="section-title" style="color: #2980b9; margin-bottom: 0;">Pencarian, Ekspor & Simpan Riwayat</span>
-                
-                <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; border-bottom: 1px dashed #ccc; padding-bottom: 15px;">
-                    <div style="display: flex; flex-direction: column; gap: 5px; flex: 1 1 150px;">
-                        <label style="font-size: 12px; font-weight: bold; color: #555;">Kategori (Role):</label>
-                        <select id="filterRole" onchange="updateFilterNamaDropdown(); filterTabel()" style="width: 100%;">
-                            <option value="">-- Semua Kategori --</option>
-                            <option value="STAFF">Staff</option>
-                            <option value="SATPAM">Satpam</option>
-                            <option value="MAGANG">Magang</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 5px; flex: 2 1 200px;">
-                        <label style="font-size: 12px; font-weight: bold; color: #555;">Nama Pegawai:</label>
-                        <select id="filterNama" onchange="filterTabel()" style="width: 100%;">
-                            <option value="">-- Semua Pegawai --</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 5px; flex: 1 1 150px;">
-                        <label style="font-size: 12px; font-weight: bold; color: #555;">Tanggal:</label>
-                        <input type="text" id="filterTanggal" placeholder="Cth: 08 atau Juli" onkeyup="filterTabel()" style="width: 100%;">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 5px; flex: 1.5 1 170px;">
-                        <label style="font-size: 12px; font-weight: bold; color: #555;">Status Kehadiran:</label>
-                        <select id="filterKehadiran" onchange="filterTabel()" style="width: 100%;">
-                            <option value="">-- Semua Status --</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; gap: 8px; flex: 0 0 auto;">
-                        <button class="btn-reset" onclick="resetFilter()" style="height: 38px;">Reset Filter</button>
-                    </div>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                    <div class="export-group">
-                        <span style="font-weight: bold; font-size: 13px; color: #2c3e50;">Aksi File:</span>
-                        <button class="btn-excel" onclick="exportSemuaExcel()">⬇ Excel Semua</button>
-                        <button class="btn-pdf" onclick="previewSemuaPDF()">🗎 Preview PDF</button>
-                        <!-- TOMBOL EXPORT PREVIEW PDF LANDSCAPE -->
-                        <button type="button" class="btn-pdf-landscape" onclick="exportPreviewPDFLandscape()">
-                            📄 PDF Laporan Bulanan
-                        </button>
+                    
+                    <!-- 1-ROW FILTER BAR TOOLBAR -->
+                    <div class="filter-toolbar-single-row">
+                        <div class="filter-item">
+                            <label for="filterRole">Kategori:</label>
+                            <select id="filterRole" onchange="updateFilterNamaDropdown(); filterTabel()">
+                                <option value="">Semua Kategori</option>
+                                <option value="STAFF">Staff</option>
+                                <option value="SATPAM">Satpam</option>
+                                <option value="MAGANG">Magang</option>
+                            </select>
+                        </div>
+                        <div class="filter-item flex-2">
+                            <label for="filterNama">Nama Pegawai:</label>
+                            <select id="filterNama" onchange="filterTabel()">
+                                <option value="">Semua Pegawai</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label for="filterTanggal">Tanggal:</label>
+                            <input type="text" id="filterTanggal" placeholder="Cth: 08 atau Juli" onkeyup="filterTabel()">
+                        </div>
+                        <div class="filter-item flex-15">
+                            <label for="filterKehadiran">Status:</label>
+                            <select id="filterKehadiran" onchange="filterTabel()">
+                                <option value="">Semua Status</option>
+                            </select>
+                        </div>
+                        <div class="filter-action">
+                            <button class="btn btn-ghost" onclick="resetFilter()" title="Reset semua filter ke posisi awal">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                Reset
+                            </button>
+                        </div>
                     </div>
                     
-                    <div style="flex-grow: 1; text-align: right; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; align-items: center;">
-                        <button class="btn-save-history" onclick="saveToHistory()">💾 Save History</button>
-                        <button class="btn-restore-history" onclick="openRestoreModal()">🕒 Restore History</button>
-                    </div>
-
-                    <!-- WADAH TOMBOL SIMPAN & BATAL EDIT (SETENGAH LAYAR BAGIAN KANAN) -->
-                    <div id="wrapperEditButtons" style="display: none; margin-top: 15px; margin-left: auto; width: 50%; max-width: 550px; gap: 10px; align-items: center; justify-content: flex-end;">
-                        <!-- TOMBOL SIMPAN HASIL EDIT -->
-                        <button class="btn-simpan-semua-kuning" id="btnSimpanSemua" onclick="simpanSemuaPerubahan()" style="flex: 3;">
-                            💾 Simpan Semua Hasil Edit
-                        </button>
+                    <!-- AKSI FILE & RIWAYAT (CLEAN & COMPACT) -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <div class="export-group">
+                            <span style="font-weight: 600; font-size: 11.5px; color: var(--text-secondary); margin-right: 2px;">Aksi Berkas:</span>
+                            <button class="btn btn-excel" onclick="exportSemuaExcel()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+                                Excel Semua
+                            </button>
+                            <button class="btn btn-pdf" onclick="previewSemuaPDF()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-4h2a1.5 1.5 0 0 1 0 3H9"/></svg>
+                                Preview PDF
+                            </button>
+                            <button type="button" class="btn btn-pdf-landscape" onclick="exportPreviewPDFLandscape()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                PDF Laporan Bulanan
+                            </button>
+                        </div>
                         
-                        <!-- TOMBOL BATAL EDIT -->
-                        <button class="btn-batal-edit" id="btnBatalEdit" onclick="batalSemuaEdit()" style="flex: 1;">
-                            ✖ Batal
-                        </button>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                            <button type="button" class="btn btn-ghost" id="btnBukaDrawerMassal" onclick="toggleSidePanelMassal(true)" title="Buka Panel Edit Multi Data Pegawai" style="border: 1px solid var(--border-subtle); color: var(--brand-blue); font-weight: 600;">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><line x1="8" y1="9" x2="11" y2="9"/><line x1="8" y1="13" x2="11" y2="13"/></svg>
+                                Edit Multi Data
+                            </button>
+                            <button class="btn btn-save-history" onclick="saveToHistory()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                Save History
+                            </button>
+                            <button class="btn btn-restore-history" onclick="openRestoreModal()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                Restore History
+                            </button>
+                        </div>
+
+                        <!-- FLOATING BAR SIMPAN & BATAL EDIT (STANDAR MODERN) -->
+                        <div id="wrapperEditButtons" class="floating-edit-bar">
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600;">
+                                <span class="clock-pulse-dot" style="background: #22c55e;"></span>
+                                <span id="lblModeEditActive">Mode Edit Aktif</span>
+                            </div>
+                            <div style="height: 16px; width: 1px; background: rgba(255,255,255,0.2);"></div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button type="button" class="btn btn-excel" id="btnSimpanSemua" onclick="simpanSemuaPerubahan()" style="height: 29px; padding: 0 13px; font-size: 12px;">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                    Simpan Semua Edit
+                                </button>
+                                <button type="button" class="btn btn-ghost" id="btnBatalEdit" onclick="batalSemuaEdit()" style="height: 29px; padding: 0 11px; font-size: 12px; color: #cbd5e1; border-color: #475569;">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    Batal
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    
                 </div>
-            </div>
 
-            <!-- TABEL DATA -->
-            <div class="table-wrapper">
-                <table id="tabelAbsen">
-                    <thead>
-                        <tr>
-                            <th onclick="sortTable(0)">No ⇅</th>
-                            <th onclick="sortTable(1)">ID ⇅</th>
-                            <th onclick="sortTable(2)">Nama ⇅</th>
-                            <th onclick="sortTable(3)">Shift ⇅</th>
-                            <th onclick="sortTable(4)">Hari ⇅</th>
-                            <th onclick="sortTable(5)">Tanggal ⇅</th>
-                            <th onclick="sortTable(6)">Kehadiran ⇅</th>
-                            <th onclick="sortTable(7)">Jam Masuk ⇅</th>
-                            <th onclick="sortTable(8)">Jam Pulang ⇅</th>
-                            <th onclick="sortTable(9)">Total Waktu ⇅</th>
-                            <th onclick="sortTable(10)">Ket/Kelebihan ⇅</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Data di-render melalui JavaScript -->
-                    </tbody>
-                </table>
-            </div>
+                <!-- TABEL DATA UTAMA -->
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table id="tabelAbsen">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable(0)">No</th>
+                                    <th onclick="sortTable(1)">ID</th>
+                                    <th onclick="sortTable(2)">Nama</th>
+                                    <th onclick="sortTable(3)">Shift</th>
+                                    <th onclick="sortTable(4)">Hari</th>
+                                    <th onclick="sortTable(5)">Tanggal</th>
+                                    <th onclick="sortTable(6)">Kehadiran</th>
+                                    <th onclick="sortTable(7)">Jam Masuk</th>
+                                    <th onclick="sortTable(8)">Jam Pulang</th>
+                                    <th onclick="sortTable(9)">Total Waktu</th>
+                                    <th onclick="sortTable(10)">Ket/Kelebihan</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data di-render melalui JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-            <!-- TABEL DATA -->
-            <div class="table-wrapper">
-                <table id="tabelAbsen">
-                    <!-- Head & Body Tabel -->
-                </table>
-            </div>
-
-            <!-- TOMBOL SAVE REPORT FINAL (DI BAWAH TABEL) -->
-            <div id="containerSaveFinal" style="margin: 20px 0; text-align: center; display: none;">
-                <button id="btnSaveReportFinal" class="btn-excel" style="background-color: #27ae60; padding: 12px 24px; font-size: 14px; border-radius: 6px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.15);" onclick="saveReportFinal()">
-                    🏆 Save Report Final
-                </button>
-                <div id="finalNoteMessage" style="margin-top: 8px; font-size: 12px; font-weight: bold; color: #e74c3c;"></div>
-            </div>
-            
-            <!-- CONTAINER ACTION BUTTONS (DI ATAS FOOTER TABEL) -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                
-                <!-- SEBELAH KIRI: TOMBOL HISTORY LAPORAN FINAL
-                <div style="display: flex; align-items: center; gap: 10px;">
-                TOMBOL DENGAN DESAIN PROFESIONAL
-                    <button id="btnHistoryFinalTable" onclick="openFinalHistoryModal()" class="btn-final-history" title="Buka History Laporan Final Presensi">
-                        <span class="icon-trophy">🗂️</span>
-                        <span>History Laporan Final</span>
+                <!-- TOMBOL SAVE REPORT FINAL (DI BAWAH TABEL) -->
+                <div id="containerSaveFinal" style="margin: 16px 0; text-align: center; display: none;">
+                    <button id="btnSaveReportFinal" class="btn btn-excel" style="padding: 9px 22px; font-size: 13px;" onclick="saveReportFinal()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        Save Report Final
                     </button>
-                </div> -->
+                    <div id="finalNoteMessage" style="margin-top: 6px; font-size: 11.5px; font-weight: 600; color: var(--color-danger);"></div>
+                </div>
 
-                <!-- SEBELAH KANAN: TOMBOL KONTROL LAINNYA (CONTOH) -->
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <!-- Tombol-tombol Anda lainnya (Save History, Save Report Final, dll) -->
+                <!-- TOMBOL FULL WIDTH HISTORY LAPORAN FINAL -->
+                <div style="width: 100%; margin-top: 12px; margin-bottom: 16px;">
+                    <button id="btnHistoryFinalTable" onclick="openFinalHistoryModal()" class="btn-final-history" title="Buka History Laporan Final Presensi">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        <span>History Laporan Final Presensi</span>
+                    </button>
                 </div>
 
             </div>
 
-            <!-- CONTAINER TOMBOL FULL WIDTH -->
-            <div style="width: 100%; margin-top: 15px; margin-bottom: 15px;">
-                <button id="btnHistoryFinalTable" onclick="openFinalHistoryModal()" class="btn-final-history" title="Buka History Laporan Final Presensi">
-                    <span class="icon-trophy">🗂️</span>
-                    <span>History Laporan Final</span>
-                </button>
+            <!-- =========================================================
+                 TAB 2: IMPOR & SINKRONISASI DATA (SHIFT & MESIN)
+                 ========================================================= -->
+            <div id="tab-import" class="tab-pane">
+                
+                <div class="section-box">
+                    <div class="section-header-row">
+                        <div>
+                            <h3 class="section-title">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                Sinkronisasi & Impor Data Presensi
+                            </h3>
+                            <div class="section-subtitle">Ikuti alur bertahap mulai dari kalender shift kerja hingga integrasi log presensi mesin fingerprint.</div>
+                        </div>
+                    </div>
+
+                    <!-- LANGKAH 1: UPLOAD JADWAL SHIFT & INPUT MANUAL POPUP -->
+                    <div class="section-box step-card step-jadwal step-jadwal-redesign" style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+                            <div>
+                                <span class="step-badge">Langkah 1</span>
+                                <h4 style="margin: 4px 0 6px 0; color: #047857; font-size: 14px; font-weight: 700;">Upload Jadwal Shift Bulanan</h4>
+                                <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">
+                                    Unggah berkas Excel (.xls / .xlsx) jadwal shift untuk membentuk kalender kerja dasar seluruh pegawai.
+                                </p>
+                            </div>
+                            <button type="button" class="btn btn-ghost" onclick="bukaModalPegawaiManual()" style="border: 1px solid var(--border-subtle); font-size: 12px; height: 32px; display: inline-flex; align-items: center; gap: 6px;">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                                Input Pegawai Manual
+                            </button>
+                        </div>
+
+                        <div class="jadwal-upload-wrapper">
+                            <input type="file" id="uploadJadwal" accept=".xls,.xlsx" style="max-width: 320px; font-size: 12px; padding: 5px 8px; background: white; border: 1px solid #86efac; border-radius: var(--radius-sm);">
+                            <button type="button" class="btn-upload-jadwal-primary" onclick="prosesExcelJadwal()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                Upload & Buat Kalender Shift
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- LANGKAH 2: UPLOAD DATA FINGERPRINT -->
+                    <div class="section-box step-card step-fingerprint" id="sectionPresensi" style="display: none; margin-bottom: 16px;">
+                        <span class="step-badge blue">Langkah 2</span>
+                        <h4 style="margin: 2px 0 8px 0; color: #0369a1; font-size: 13.5px; font-weight: 700;">Integrasikan / Replace Data Kehadiran Mesin</h4>
+                        <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 12px 0;">
+                            Unggah berkas rekap dari mesin presensi untuk mengisi otomatis jam masuk dan jam pulang pegawai.
+                        </p>
+                        <div class="form-group">
+                            <input type="file" id="uploadExcel" accept=".xls,.xlsx">
+                            <button class="btn btn-upload" onclick="prosesExcel()">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                Tambahkan / Replace Data Mesin
+                            </button>
+                        </div>
+                        <small style="color: var(--color-warning); font-weight: 600; display: block; margin-top: 6px; font-size: 11px;">
+                            *Mengupload file absen di sini akan secara otomatis menimpa (replace) data mesin sebelumnya.
+                        </small>
+                    </div>
+
+                    <!-- KOTAK AUDIT PRESENSI -->
+                    <div id="auditContainer" class="audit-container">
+                        <button class="btn btn-toggle-audit" id="btnToggleAudit" onclick="toggleAuditBox()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            Sembunyikan / Tampilkan Area Keterangan Presensi
+                        </button>
+                        
+                        <div class="section-box" id="sectionAudit" style="margin-bottom:0;">
+                            <div id="auditBox" class="audit-box"></div>
+                            <div id="machineAlertBox" class="machine-alert-box" style="display: none;"></div>
+                            
+                            <div style="text-align: right; margin-top: 10px;">
+                                <button class="btn btn-recheck" onclick="jalankanRecheck()">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                                    Re-Check Presensi
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
             </div>
 
-            <div class="app-footer">Laporan Presensi Pegawai v.15</div>
+
+            <!-- =========================================================
+                 TAB 4: RIWAYAT & ARSIP CLOUD
+                 ========================================================= -->
+            <div id="tab-history" class="tab-pane">
+                
+                <div class="section-box">
+                    <div class="section-header-row">
+                        <div>
+                            <h3 class="section-title">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                                Riwayat Pekerjaan & Arsip Cloud Firebase
+                            </h3>
+                            <div class="section-subtitle">Simpan checkpoint pekerjaan saat ini ke Database Cloud atau pulihkan riwayat sebelumnya.</div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 10px;">
+                        
+                        <!-- Card 1: Cloud Checkpoints -->
+                        <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 16px;">
+                            <h4 style="margin: 0 0 4px 0; color: var(--text-primary); font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                Simpan / Pulihkan Checkpoint
+                            </h4>
+                            <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin: 0 0 14px 0;">
+                                Simpan seluruh data yang sedang dikerjakan ke Firebase Realtime Database.
+                            </p>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button class="btn btn-save-history" onclick="saveToHistory()">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                    Simpan ke Cloud
+                                </button>
+                                <button class="btn btn-restore-history" onclick="openRestoreModal()">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    Restore Riwayat
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Laporan Final -->
+                        <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: var(--radius-sm); padding: 16px;">
+                            <h4 style="margin: 0 0 4px 0; color: var(--brand-purple); font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                History Laporan Final Presensi
+                            </h4>
+                            <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin: 0 0 14px 0;">
+                                Buka arsip laporan final resmi yang telah disimpan permanen.
+                            </p>
+                            <button onclick="openFinalHistoryModal()" class="btn btn-pdf-indigo" style="font-weight: 600; width: 100%;">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                Buka Arsip Laporan Final
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="app-footer">
+            Laporan Presensi Pegawai v.15 &bull; Kantor Regional XIV BKN Manokwari
         </div>
     </div>
 
+    <!-- =========================================================
+         DOUBLE-SIDE PANEL (DRAWER KANAN: AKSI & PENGELOLAAN MASSAL)
+         ========================================================= -->
+    <div id="sideDrawerBackdrop" class="side-drawer-backdrop" onclick="toggleSidePanelMassal(false)"></div>
     
-    
+    <aside id="sidePanelMassal" class="side-drawer-panel" aria-label="Panel Edit Multi Data Pegawai">
+        <!-- HEADER DRAWER -->
+        <div class="side-drawer-header">
+            <h3 class="side-drawer-header-title">
+                <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><line x1="8" y1="9" x2="11" y2="9"/><line x1="8" y1="13" x2="11" y2="13"/></svg>
+                Edit Multi Data Pegawai
+            </h3>
+            <button type="button" class="side-drawer-close" onclick="toggleSidePanelMassal(false)" title="Tutup Panel">✕</button>
+        </div>
+
+        <!-- STICKY & FLOATING UPDATE CONTROLS (TETAP MENEMPEL SAAT CHECKLIST DISCROLL) -->
+        <div class="drawer-sticky-controls">
+            <div class="drawer-controls-title">
+                <span style="display: flex; align-items: center; gap: 5px;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Update Jam Presensi Terpilih
+                </span>
+                <span id="selectedPegawaiCountBadge" style="background: white; border: 1px solid #bae6fd; color: #0284c7; padding: 1px 7px; border-radius: 999px; font-size: 10.5px; text-transform: none;">0 terpilih</span>
+            </div>
+            
+            <div class="drawer-form-grid">
+                <div>
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 3px;">Tanggal:</label>
+                    <input type="date" id="tanggalManual" style="height: 30px; font-size: 11.5px; width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0 6px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 3px;">Jam:</label>
+                    <input type="time" id="jamManual" style="height: 30px; font-size: 11.5px; width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0 6px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+                <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 3px;">Terapkan Sebagai:</label>
+                <select id="ketManual" style="height: 30px; font-size: 11.5px; width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: white; box-sizing: border-box;">
+                    <option value="masuk">Set sebagai Jam Masuk</option>
+                    <option value="pulang">Set sebagai Jam Pulang</option>
+                </select>
+            </div>
+
+            <div class="drawer-action-row">
+                <button type="button" class="btn btn-upload" onclick="tambahDataManual()" style="flex: 1; height: 32px; font-size: 12px; justify-content: center;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Terapkan Jam
+                </button>
+                <button type="button" id="btnUndoMassal" class="btn btn-undo" onclick="undoUpdateMassal()" disabled title="Kembali ke posisi sebelum update massal terakhir" style="height: 32px; font-size: 12px;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    Undo
+                </button>
+            </div>
+        </div>
+
+        <!-- BODY SCROLLABLE: SEARCH & CHECKLIST PEGAWAI -->
+        <div class="side-drawer-body">
+            <div>
+                <input type="text" id="inputSearchDrawerPegawai" placeholder="Cari nama atau ID pegawai..." oninput="filterDrawerPegawai(this.value)" style="width: 100%; height: 30px; font-size: 12px; padding: 0 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-surface-subtle); box-sizing: border-box;">
+            </div>
+
+            <div style="background: var(--bg-surface-subtle); padding: 7px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+                <label style="font-weight: 600; font-size: 12px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 6px; margin: 0;">
+                    <input type="checkbox" id="checkAllManual" onchange="toggleCheckAllManual()" style="width: 14px; height: 14px; accent-color: var(--brand-accent);"> 
+                    Centang Semua Pegawai
+                </label>
+            </div>
+
+            <div class="manual-checkbox-list" id="checkboxPegawaiList" style="flex: 1; max-height: none; min-height: 180px;">
+                <span style="font-size: 11.5px; color: var(--text-muted);">Belum ada pegawai dimuat. Silakan buat kalender shift terlebih dahulu di tab 'Impor & Sinkronisasi'.</span>
+            </div>
+        </div>
+
+        <!-- FOOTER: EKSPOR & HAPUS TERPILIH -->
+        <div class="side-drawer-footer">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px;">
+                Opsi Ekspor & Kelola Terpilih:
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button type="button" class="btn btn-excel" onclick="prosesBatchExport('excel')" style="height: 31px; font-size: 11.5px; justify-content: center;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+                    Excel Terpilih
+                </button>
+                <button type="button" class="btn btn-pdf-indigo" onclick="prosesBatchExport('pdf_download')" style="height: 31px; font-size: 11.5px; justify-content: center;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-4h2a1.5 1.5 0 0 1 0 3H9"/></svg>
+                    PDF Terpilih
+                </button>
+            </div>
+            <button type="button" class="btn btn-hapus-pegawai" onclick="hapusPegawaiTerpilih()" style="width: 100%; height: 30px; font-size: 11.5px; justify-content: center;">
+                <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Hapus Pegawai Terpilih
+            </button>
+        </div>
+    </aside>
+
     <!-- TOMBOL SCROLL TOP -->
-    <button id="btnScrollTop" onclick="scrollToTop()" title="Kembali ke atas">Keatas ↑</button>
+    <button id="btnScrollTop" onclick="scrollToTop()" title="Kembali ke atas">
+        <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+        Ke Atas
+    </button>
 
     <!-- MODAL LOGOUT -->
-    <div class="modal-backdrop" id="modalLogout">
-        <div class="modal-content" style="max-width: 420px; text-align: center;">
-            <div style="font-size: 42px; margin-bottom: 10px;">🚪</div>
-            <h3 style="margin: 0 0 10px 0; color: #2c3e50;">Konfirmasi Logout</h3>
-            <p style="font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 20px;">
+    <div class="modal-backdrop" id="modalLogout" style="display: none;">
+        <div class="modal-content" style="max-width: 380px; text-align: center;">
+            <div style="margin-bottom: 12px; color: var(--color-danger);">
+                <svg class="icon-svg" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </div>
+            <h3 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 16px;">Konfirmasi Logout</h3>
+            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
                 Apakah Anda yakin ingin keluar dari aplikasi presensi?
             </p>
             
             <!-- TOMBOL 1: LOGOUT TANPA SIMPAN -->
-            <button type="button" id="btnLogoutNoSave" class="btn-pdf" style="width: 100%; padding: 12px; font-size: 14px; background-color: #e74c3c; font-weight: bold; margin-bottom: 12px; border-radius: 6px;" onclick="logoutWithSave(false)">
-                🚪 Logout Tanpa Simpan
+            <button type="button" id="btnLogoutNoSave" class="btn btn-pdf" style="width: 100%; height: 36px; font-size: 12.5px; margin-bottom: 8px;" onclick="logoutWithSave(false)">
+                Logout Tanpa Simpan
             </button>
             
-            <div style="display: flex; gap: 10px; justify-content: center;">
+            <div style="display: flex; gap: 8px; justify-content: center;">
                 <!-- TOMBOL 2: SIMPAN & LOGOUT -->
-                <button type="button" id="btnLogoutWithSave" class="btn-save-history" style="flex: 1; padding: 8px 10px; font-size: 11px; font-weight: bold; border-radius: 5px;" onclick="logoutWithSave(true)">
-                    💾 Simpan & Logout
+                <button type="button" id="btnLogoutWithSave" class="btn btn-save-history" style="flex: 1; height: 34px; font-size: 12px;" onclick="logoutWithSave(true)">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
+                    Simpan & Logout
                 </button>
-                <button type="button" class="btn-reset" style="flex: 1; padding: 8px 10px; font-size: 11px; font-weight: bold; border-radius: 5px;" onclick="tutupModalLogout()">
+                <button type="button" class="btn btn-ghost" style="flex: 1; height: 34px; font-size: 12px;" onclick="tutupModalLogout()">
                     Batal
                 </button>
             </div>
@@ -306,36 +571,42 @@
     </div>
 
     <!-- MODAL RESTORE HISTORY -->
-    <div class="modal-backdrop" id="modalRestore">
+    <div class="modal-backdrop" id="modalRestore" style="display: none;">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
-                <h3>🕒 Restore History Pekerjaan</h3>
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Restore History Pekerjaan
+                </h3>
                 <span class="modal-close" onclick="tutupModalRestore()">&times;</span>
             </div>
             <div>
-                <p style="font-size: 12px; color: #555; margin-bottom: 15px; line-height: 1.4;">
+                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 15px; line-height: 1.4;">
                     Pilih versi pekerjaan dari Database Cloud.
                 </p>
                 <div id="historyListContainer" style="max-height: 300px; overflow-y: auto;"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn-reset" onclick="tutupModalRestore()">Batal</button>
+                <button type="button" class="btn btn-ghost" onclick="tutupModalRestore()">Batal</button>
             </div>
         </div>
     </div>
 
     <!-- MODAL PEGAWAI MANUAL -->
-    <div class="modal-backdrop" id="modalPegawaiManual">
-        <div class="modal-content">
+    <div class="modal-backdrop" id="modalPegawaiManual" style="display: none;">
+        <div class="modal-content" style="max-width: 580px;">
             <div class="modal-header">
-                <h3>Tambah Pegawai Manual</h3>
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                    Tambah Pegawai Manual
+                </h3>
                 <span class="modal-close" onclick="tutupModalPegawaiManual()">&times;</span>
             </div>
             <div id="modalBodyPegawai">
-                <div style="display: flex; gap: 10px; margin-bottom: 15px; background: #eaf2f8; padding: 12px; border-radius: 6px; border: 1px solid #aed6f1;">
+                <div style="display: flex; gap: 10px; margin-bottom: 12px; background: var(--bg-surface-subtle); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
                     <div style="flex: 1;">
-                        <label style="font-size: 12px; font-weight: bold; color: #2c3e50; display: block; margin-bottom: 4px;">Pilih Bulan Periode:</label>
-                        <select id="modalPilihBulan" style="width: 100%; padding: 6px; font-size: 13px; font-weight: bold; background: white;">
+                        <label style="font-size: 11px; font-weight: 600; color: var(--text-primary); display: block; margin-bottom: 4px;">Pilih Bulan Periode:</label>
+                        <select id="modalPilihBulan" style="width: 100%; height: 30px; padding: 0 8px; font-size: 12px; font-weight: 600; background: white; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
                             <option value="0">Januari</option>
                             <option value="1">Februari</option>
                             <option value="2">Maret</option>
@@ -351,100 +622,123 @@
                         </select>
                     </div>
                     <div style="flex: 1;">
-                        <label style="font-size: 12px; font-weight: bold; color: #2c3e50; display: block; margin-bottom: 4px;">Pilih Tahun:</label>
-                        <select id="modalPilihTahun" style="width: 100%; padding: 6px; font-size: 13px; font-weight: bold; background: white;"></select>
+                        <label style="font-size: 11px; font-weight: 600; color: var(--text-primary); display: block; margin-bottom: 4px;">Pilih Tahun:</label>
+                        <select id="modalPilihTahun" style="width: 100%; height: 30px; padding: 0 8px; font-size: 12px; font-weight: 600; background: white; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);"></select>
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <span style="font-size: 12px; color: #555;">Isi ID, Nama, dan Kategori Pegawai:</span>
-                    <button type="button" class="btn-bulk-input" onclick="bukaModalBulkText()">📋 Input Banyak Pegawai</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Daftar Pegawai yang Ditambahkan:</span>
+                    <button type="button" class="btn btn-ghost" onclick="bukaModalBulkText()" style="border: 1px solid var(--border-subtle); height: 28px; font-size: 11.5px;">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                        Input Banyak Pegawai (Plain Text)
+                    </button>
+                </div>
+
+                <!-- KOLOM HEADER TERSTRUKTUR -->
+                <div class="pegawai-inputs-header">
+                    <div>ID Pegawai</div>
+                    <div>Nama Lengkap</div>
+                    <div>Kategori</div>
+                    <div style="text-align: center;">Aksi</div>
                 </div>
 
                 <div id="pegawaiInputContainer">
                     <div class="pegawai-row-input">
-                        <input type="text" placeholder="ID Pegawai" class="input-modal-id">
-                        <input type="text" placeholder="Nama Lengkap" class="input-modal-nama">
-                        <select class="input-modal-role" style="max-width: 130px;">
+                        <input type="text" placeholder="Contoh: 101" class="input-modal-id">
+                        <input type="text" placeholder="Nama Lengkap Pegawai" class="input-modal-nama">
+                        <select class="input-modal-role">
                             <option value="">-- Kategori --</option>
                             <option value="STAFF">STAFF</option>
                             <option value="SATPAM">SATPAM</option>
                             <option value="MAGANG">MAGANG</option>
                         </select>
-                        <button type="button" class="btn-hapus" onclick="hapusBarisInputModal(this)">✕</button>
+                        <button type="button" class="btn-hapus" onclick="hapusBarisInputModal(this)" title="Hapus baris ini">✕</button>
                     </div>
                 </div>
                 
-                <div style="display: flex; gap: 8px; margin-top: 5px;">
-                    <button type="button" class="btn-add-row" onclick="tambahBarisInputModal()">+ Baris Baru</button>
-                    <button type="button" class="btn-reset-modal" onclick="resetFormModalPegawai()">🔄 Reset Form</button>
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button type="button" class="btn btn-ghost" onclick="tambahBarisInputModal()" style="border: 1px solid var(--border-subtle); height: 30px; font-size: 12px;">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Tambah Baris
+                    </button>
+                    <button type="button" class="btn btn-ghost" onclick="resetFormModalPegawai()" style="border: 1px solid var(--border-subtle); height: 30px; font-size: 12px;">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        Reset Form
+                    </button>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn-reset" onclick="tutupModalPegawaiManual()">Batal</button>
-                <button type="button" class="btn-excel" onclick="simpanPegawaiManualPopUp()">💾 Simpan Pegawai</button>
+                <button type="button" class="btn btn-ghost" onclick="tutupModalPegawaiManual()">Batal</button>
+                <button type="button" class="btn btn-excel" onclick="simpanPegawaiManualPopUp()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Simpan Pegawai
+                </button>
             </div>
         </div>
     </div>
 
     <!-- MODAL BULK TEXT -->
-    <div class="modal-backdrop" id="modalBulkText" style="z-index: 2050;">
+    <div class="modal-backdrop" id="modalBulkText" style="display: none; z-index: 2050;">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
-                <h3>Input Banyak Pegawai (Plain Text)</h3>
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                    Input Banyak Pegawai (Plain Text)
+                </h3>
                 <span class="modal-close" onclick="tutupModalBulkText()">&times;</span>
             </div>
             <div>
-                <p style="font-size: 12px; color: #555; margin-bottom: 10px; line-height: 1.4;">
+                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">
                     Tempelkan (Paste) daftar pegawai dengan format <b>[ID] [NAMA LENGKAP]</b> (1 baris per pegawai).
                 </p>
-                <div style="background: #f8f9f9; padding: 10px; border-radius: 5px; font-size: 11px; color: #7f8c8d; margin-bottom: 10px; border: 1px dashed #ccc;">
+                <div style="background: var(--bg-surface-subtle); padding: 10px; border-radius: var(--radius-sm); font-size: 11px; color: var(--text-secondary); margin-bottom: 10px; border: 1px dashed var(--border-subtle);">
                     <b>Contoh Format:</b><br>
                     1001 Aditya Rahman<br>
                     1002 Fera Wati<br>
                     1003, Budi Santoso
                 </div>
-                <textarea id="bulkTextarea" rows="8" style="width: 100%; padding: 10px; font-family: monospace; font-size: 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;" placeholder="1001 Aditya Rahman&#10;1002 Fera Wati&#10;1003 Budi Santoso"></textarea>
+                <textarea id="bulkTextarea" rows="8" style="width: 100%; padding: 10px; font-family: monospace; font-size: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); box-sizing: border-box;" placeholder="1001 Aditya Rahman&#10;1002 Fera Wati&#10;1003 Budi Santoso"></textarea>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn-reset" onclick="tutupModalBulkText()">Batal</button>
-                <button type="button" class="btn-excel" onclick="prosesBulkTextToRows()">✅ Terapkan ke Form</button>
+                <button type="button" class="btn btn-ghost" onclick="tutupModalBulkText()">Batal</button>
+                <button type="button" class="btn btn-excel" onclick="prosesBulkTextToRows()">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    Terapkan ke Form
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- TOMBOL FLOATING BUKA HISTORY LAPORAN (KIRI BAWAH)
-    <button id="btnHistoryFloating" class="btn-history-floating" onclick="openFinalHistoryModal()" title="Buka History Laporan Final" type="button">
-        🕒 Buka History Laporan
-    </button> -->
-
     <!-- MODAL POP UP HISTORY LAPORAN FINAL -->
     <div id="modalFinalHistory" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px); z-index: 9999; justify-content: center; align-items: center;">
-        <div style="background: #ffffff; padding: 24px 28px; border-radius: 12px; width: 520px; max-width: 92%; box-shadow: 0 15px 35px rgba(0,0,0,0.25); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: left !important;">
+        <div style="background: #ffffff; padding: 22px 24px; border-radius: var(--radius-md); width: 540px; max-width: 92%; box-shadow: var(--shadow-modal); font-family: var(--font-sans); text-align: left !important;">
             
             <!-- Header Modal -->
-            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #8e44ad; padding-bottom: 10px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px; margin-bottom: 14px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 22px;">🏆</span>
-                    <h3 style="margin: 0; color: #2c3e50; font-size: 18px; font-weight: 700;">
+                    <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: #faf5ff; display: flex; align-items: center; justify-content: center; color: var(--brand-purple); border: 1px solid #e9d5ff;">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    </div>
+                    <h3 style="margin: 0; color: var(--text-primary); font-size: 15px; font-weight: 700;">
                         History Laporan Final Presensi
                     </h3>
                 </div>
-                <button onclick="tutupModalFinalHistory()" style="background: transparent; border: none; font-size: 20px; cursor: pointer; color: #7f8c8d; font-weight: bold;">✕</button>
+                <button onclick="tutupModalFinalHistory()" style="background: transparent; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted); font-weight: bold; line-height: 1;">✕</button>
             </div>
 
-            <p style="font-size: 12.5px; color: #666; margin: 0 0 16px 0; line-height: 1.4;">
+            <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 14px 0; line-height: 1.4;">
                 Daftar rekapitulasi presensi final yang telah disimpan secara permanen ke Database Cloud. Klik tombol untuk memuat/membuka laporan:
             </p>
 
             <!-- Container Daftar Laporan Final (Render via JS) -->
-            <div id="finalHistoryListContainer" style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 2px; margin-bottom: 16px;">
+            <div id="finalHistoryListContainer" style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 2px; margin-bottom: 16px;">
                 <!-- Data riwayat laporan final di-render di sini -->
             </div>
 
             <!-- Footer Modal -->
-            <div style="display: flex; justify-content: flex-end; border-top: 1px solid #f0f0f0; padding-top: 14px;">
-                <button onclick="tutupModalFinalHistory()" style="padding: 8px 18px; background: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;">
+            <div style="display: flex; justify-content: flex-end; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+                <button onclick="tutupModalFinalHistory()" class="btn btn-ghost">
                     Tutup
                 </button>
             </div>
@@ -452,214 +746,102 @@
         </div>
     </div>
 
-    <!-- Modul Scripts Terpisah -->
-    <script src="js/history.js"></script>
-    <script src="js/manual.js"></script>
-    <script src="js/app.js"></script>
-    <script src="js/auth.js"></script>
-
-    <!-- SCRIPT TIMER SESI USER DENGAN EFEK LAYAR PUTIH -->
-    <script>
-    (function() {
-        //Setting berapa menit timer sesi aktif
-        var MENIT_SESI = 3;
-        var totalDetikSisa = MENIT_SESI * 60;
-        var intervalTimerDashboard = null;
-
-        function updateTampilanTimer() {
-            var display = document.getElementById("timerDisplay");
-            if (!display) return;
-
-            var m = Math.floor(totalDetikSisa / 60);
-            var s = totalDetikSisa % 60;
-
-            var strM = (m < 10 ? "0" : "") + m;
-            var strS = (s < 10 ? "0" : "") + s;
-
-            display.innerText = strM + ":" + strS;
-
-            if (m < 1) {
-                display.style.color = "#e74c3c";
-            } else {
-                display.style.color = "#2ecc71";
-            }
-        }
-
-        function buatLayarMenjadiPutih() {
-            // Buat elemen overlay jika belum ada
-            var overlay = document.getElementById("sessionExpiredOverlay");
-            if (!overlay) {
-                overlay = document.createElement("div");
-                overlay.id = "sessionExpiredOverlay";
-                overlay.className = "session-expired-overlay";
-                document.body.appendChild(overlay);
-            }
+    <!-- MODAL PILIH KATEGORI EXPORT PDF LANDSCAPE -->
+    <div id="modalPilihKategori" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: #ffffff; padding: 22px 24px; border-radius: var(--radius-md); width: 460px; max-width: 92%; box-shadow: var(--shadow-modal); font-family: var(--font-sans); text-align: left !important;">
             
-            // Picu transisi warna putih
-            setTimeout(function() {
-                overlay.classList.add("active");
-            }, 10);
-        }
-
-        function mulaiTimerHitungMundur() {
-            if (intervalTimerDashboard) {
-                clearInterval(intervalTimerDashboard);
-            }
-
-            updateTampilanTimer();
-
-            intervalTimerDashboard = setInterval(function() {
-                if (totalDetikSisa > 0) {
-                    totalDetikSisa--;
-                    updateTampilanTimer();
-                } else {
-                    clearInterval(intervalTimerDashboard);
-                    
-                    // 1. Eksekusi efek layar putih
-                    buatLayarMenjadiPutih();
-
-                    // 2. Beri jeda 600ms agar animasi transisi putih selesai sebelum alert muncul
-                    setTimeout(function() {
-                        alert("⏱️ Sesi Anda telah berakhir karena tidak ada aktivitas selama beberapa menit.\nSilakan login kembali.");
-                        if (typeof logoutUser === "function") {
-                            logoutUser();
-                        } else {
-                            sessionStorage.clear();
-                            window.location.href = "index.html";
-                        }
-                    }, 600);
-                }
-            }, 1000);
-        }
-
-        function resetTimerAktivitas() {
-            totalDetikSisa = MENIT_SESI * 60;
-            updateTampilanTimer();
-        }
-
-        function handleScrollTimer() {
-            var timerWidget = document.getElementById("sessionTimerFloating");
-            var scrollTopVal = window.pageYOffset || document.documentElement.scrollTop;
-
-            if (timerWidget) {
-                if (scrollTopVal > 50) {
-                    timerWidget.classList.add("hidden-on-scroll");
-                } else {
-                    timerWidget.classList.remove("hidden-on-scroll");
-                }
-            }
-        }
-
-        window.addEventListener("load", function() {
-            mulaiTimerHitungMundur();
-
-            window.addEventListener("click", resetTimerAktivitas, true);
-            window.addEventListener("keydown", resetTimerAktivitas, true);
-            window.addEventListener("scroll", handleScrollTimer, true);
-        });
-    })();
-    </script>
-
-<!-- MODAL PILIH KATEGORI EXPORT PDF LANDSCAPE (FIXED TOTAL RATA KIRI) -->
-<div id="modalPilihKategori" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px); z-index: 9999; justify-content: center; align-items: center;">
-    <div style="background: #ffffff; padding: 24px 28px; border-radius: 12px; width: 440px; max-width: 92%; box-shadow: 0 15px 35px rgba(0,0,0,0.25); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: left !important;">
-        
-        <!-- Header Modal -->
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; border-bottom: 2px solid #3498db; padding-bottom: 10px; text-align: left !important;">
-            <span style="font-size: 22px;">📄</span>
-            <h3 style="margin: 0; color: #2c3e50; font-size: 18px; font-weight: 700; text-align: left !important;">
-                Pilih Kategori PDF Landscape
-            </h3>
-        </div>
-
-        <p style="font-size: 13px; color: #666; margin: 10px 0 16px 0; line-height: 1.4; text-align: left !important;">
-            Pilih atau hilangkan centang kategori pegawai yang ingin Anda sertakan dalam laporan:
-        </p>
-
-        <!-- Master Checkbox (Pilih Semua Kategori) - MENGGUNAKAN TABEL ANTI-MENIMPA -->
-        <div style="background: #ebf5fb; border: 1px solid #aed6f1; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; box-sizing: border-box;">
-            <label style="cursor: pointer; display: block; width: 100%; margin: 0; padding: 0;">
-                <table style="width: 100%; border-collapse: collapse; border: none; background: transparent;">
-                    <tr>
-                        <td style="width: 28px; vertical-align: middle; text-align: left; padding: 0; border: none;">
-                            <input type="checkbox" id="checkAllKategoriPdf" onchange="toggleCheckAllKategoriPdf(this.checked)" checked style="width: 18px; height: 18px; accent-color: #2980b9; cursor: pointer; display: block; margin: 0;">
-                        </td>
-                        <td style="vertical-align: middle; text-align: left; padding-left: 8px; border: none;">
-                            <span style="font-weight: 700; font-size: 14px; color: #1b4f72; display: inline-block;">(Pilih Semua Kategori)</span>
-                        </td>
-                    </tr>
-                </table>
-            </label>
-        </div>
-
-        <!-- Container List Kategori Dynamic (Di-render via JS) -->
-        <div id="containerListKategoriPdf" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 2px; margin-bottom: 20px; text-align: left !important;">
-            <!-- Pilihan kategori di-render otomatis via JS -->
-        </div>
-
-        <!-- Pilihan Spesimen Tanda Tangan (TTD Manual vs Anchor DS) -->
-        <div style="margin-bottom: 20px; border-top: 1px dashed #e0e6ed; padding-top: 14px; text-align: left !important;">
-            <label style="font-weight: 700; font-size: 13.5px; color: #2c3e50; display: block; margin-bottom: 8px;">
-                ✍️ Pilih Spesimen Tanda Tangan:
-            </label>
-            <!-- 💡 Perbaikan: Tambahkan flex-wrap: wrap dan sesuaikan gap -->
-            <div style="display: flex; gap: 12px 18px; align-items: center; flex-wrap: wrap; background: #f8f9fa; padding: 10px 14px; border-radius: 8px; border: 1px solid #e0e6ed;">
-                
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #2c3e50; margin: 0;">
-                    <input type="radio" name="radioSpesimen" value="anchor" checked style="accent-color: #080808; cursor: pointer; width: 16px; height: 16px;">
-                    Anchor DS
-                </label>
-                
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #2c3e50; margin: 0;">
-                    <input type="radio" name="radioSpesimen" value="manual" style="accent-color: #080808; cursor: pointer; width: 16px; height: 16px;">
-                    TTD Kabag TU
-                </label>
-                
-                <!-- 💡 Perbaikan: Penyesuaian style agar konsisten dan tidak overflow -->
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #2c3e50; margin: 0;">
-                    <input type="radio" name="radioSpesimen" value="upt" style="accent-color: #080808; cursor: pointer; width: 16px; height: 16px;">
-                    TTD Ka. UPT
-                </label>
-                
+            <!-- Header Modal -->
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: #eff6ff; display: flex; align-items: center; justify-content: center; color: var(--brand-blue); border: 1px solid #bfdbfe;">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    </div>
+                    <h3 style="margin: 0; color: var(--text-primary); font-size: 15px; font-weight: 700;">
+                        Pilih Kategori PDF Landscape
+                    </h3>
+                </div>
+                <button onclick="tutupModalKategoriPdf()" style="background: transparent; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted); font-weight: bold; line-height: 1;">✕</button>
             </div>
-        </div>
 
-        <!-- Tombol Aksi Modal -->
-        <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #f0f0f0; padding-top: 16px;">
-            <button onclick="tutupModalKategoriPdf()" style="padding: 9px 18px; background: #951010; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px;">
-                ✖ Batal
-            </button>
-            <button onclick="prosesExportPdfLandscapeDenganPilihan()" style="padding: 9px 20px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);">
-                Lanjutkan Export!
-            </button>
-        </div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 12px 0; line-height: 1.4;">
+                Pilih atau hilangkan centang kategori pegawai yang ingin Anda sertakan dalam laporan:
+            </p>
 
+            <!-- Master Checkbox (Pilih Semua Kategori) -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-sm); padding: 8px 12px; margin-bottom: 12px; box-sizing: border-box;">
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; width: 100%; margin: 0;">
+                    <input type="checkbox" id="checkAllKategoriPdf" onchange="toggleCheckAllKategoriPdf(this.checked)" checked style="width: 15px; height: 15px; accent-color: var(--brand-blue); cursor: pointer;">
+                    <span style="font-weight: 700; font-size: 12.5px; color: #1e40af;">(Pilih Semua Kategori)</span>
+                </label>
+            </div>
+
+            <!-- Container List Kategori Dynamic (Di-render via JS) -->
+            <div id="containerListKategoriPdf" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px; margin-bottom: 14px;">
+                <!-- Pilihan kategori di-render otomatis via JS -->
+            </div>
+
+            <!-- Pilihan Spesimen Tanda Tangan (TTD Manual vs Anchor DS) -->
+            <div style="margin-bottom: 16px; border-top: 1px dashed var(--border-subtle); padding-top: 12px;">
+                <label style="font-weight: 600; font-size: 12px; color: var(--text-primary); display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+                    Pilih Spesimen Tanda Tangan:
+                </label>
+                <div style="display: flex; gap: 12px 16px; align-items: center; flex-wrap: wrap; background: var(--bg-surface-subtle); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-primary); margin: 0;">
+                        <input type="radio" name="radioSpesimen" value="anchor" checked style="accent-color: var(--brand-blue); cursor: pointer; width: 14px; height: 14px;">
+                        Anchor DS
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-primary); margin: 0;">
+                        <input type="radio" name="radioSpesimen" value="manual" style="accent-color: var(--brand-blue); cursor: pointer; width: 14px; height: 14px;">
+                        TTD Kabag TU
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-primary); margin: 0;">
+                        <input type="radio" name="radioSpesimen" value="upt" style="accent-color: var(--brand-blue); cursor: pointer; width: 14px; height: 14px;">
+                        TTD Ka. UPT
+                    </label>
+                </div>
+            </div>
+
+            <!-- Tombol Aksi Modal -->
+            <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+                <button onclick="tutupModalKategoriPdf()" class="btn btn-ghost">
+                    Batal
+                </button>
+                <button onclick="prosesExportPdfLandscapeDenganPilihan()" class="btn btn-excel">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    Lanjutkan Export
+                </button>
+            </div>
+
+        </div>
     </div>
-</div>
 
-<!-- MODAL KONFIRMASI HAPUS HISTORY -->
-<div id="modalHapusHistory" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px); z-index: 10000; justify-content: center; align-items: center;">
-    <div style="background: #ffffff; padding: 22px 26px; border-radius: 12px; width: 420px; max-width: 90%; box-shadow: 0 15px 35px rgba(0,0,0,0.3); text-align: center;">
-        
-        <div style="font-size: 42px; color: #e74c3c; margin-bottom: 10px;">⚠️</div>
-        <h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 17px; font-weight: 700;">Konfirmasi Hapus Riwayat</h3>
-        <p style="font-size: 13px; color: #7f8c8d; margin: 0 0 20px 0; line-height: 1.4;" id="teksKonfirmasiHapusHistory">
-            Apakah Anda yakin ingin menghapus data pekerjaan tersimpan ini dari Database Cloud?
-        </p>
+    <!-- MODAL KONFIRMASI HAPUS HISTORY -->
+    <div id="modalHapusHistory" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: #ffffff; padding: 22px 24px; border-radius: var(--radius-md); width: 400px; max-width: 90%; box-shadow: var(--shadow-modal); text-align: center; font-family: var(--font-sans);">
+            
+            <div style="margin-bottom: 12px; color: var(--color-danger);">
+                <svg class="icon-svg" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <h3 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 15px; font-weight: 700;">Konfirmasi Hapus Riwayat</h3>
+            <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 18px 0; line-height: 1.4;" id="teksKonfirmasiHapusHistory">
+                Apakah Anda yakin ingin menghapus data pekerjaan tersimpan ini dari Database Cloud?
+            </p>
 
-        <input type="hidden" id="targetHapusHistoryId" value="">
+            <input type="hidden" id="targetHapusHistoryId" value="">
 
-        <div style="display: flex; justify-content: center; gap: 12px;">
-            <button onclick="eksekusiHapusHistoryFirebase()" id="btnConfirmHapusHistory" style="padding: 9px 18px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12.5px;">
-                🗑️ Ya, Hapus Permanen
-            </button>
-            <button onclick="tutupModalHapusHistory()" style="padding: 9px 18px; background: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12.5px;">
-                Batal
-            </button>
+            <div style="display: flex; justify-content: center; gap: 8px;">
+                <button onclick="eksekusiHapusHistoryFirebase()" id="btnConfirmHapusHistory" class="btn btn-hapus-pegawai" style="padding: 7px 16px;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Ya, Hapus Permanen
+                </button>
+                <button onclick="tutupModalHapusHistory()" class="btn btn-ghost" style="padding: 7px 16px;">
+                    Batal
+                </button>
+            </div>
+
         </div>
-
     </div>
-</div>
 
 <!-- Modal Loading Progress Restore History -->
 <div id="modalRestoreProgress" class="modal-restore-overlay" style="display: none;">
@@ -675,6 +857,11 @@
     </div>
   </div>
 </div>
+
+    <!-- Modul Scripts Aplikasi -->
+    <script src="js/history.js"></script>
+    <script src="js/manual.js"></script>
+    <script src="js/app.js"></script>
 
 </body>
 </html>

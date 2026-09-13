@@ -1,7 +1,103 @@
 // Cek Login Session saat membuka dashboard
 const activeUser = checkAuthSession();
 
+// =========================================================
+// SISTEM NAVIGASI TAB (EXTENSIBLE TAB CONTROLLER)
+// =========================================================
+function switchTab(tabId) {
+    if (!tabId) return;
+
+    // Normalisasi jika tabId diawali '#'
+    if (tabId.startsWith('#')) tabId = tabId.substring(1);
+
+    // Jika tab aksi massal dipanggil secara legacy, arahkan ke tab presensi dan buka panel double-side
+    if (tabId === 'tab-manual') {
+        switchTab('tab-presensi');
+        if (typeof toggleSidePanelMassal === 'function') {
+            toggleSidePanelMassal(true);
+        }
+        return;
+    }
+
+    // 1. Update status aktif pada tombol tab
+    const tabButtons = document.querySelectorAll('.nav-tab-btn');
+    tabButtons.forEach(btn => {
+        if (btn.getAttribute('data-tab') === tabId) {
+            btn.classList.add('active');
+            btn.setAttribute('aria-selected', 'true');
+        } else {
+            btn.classList.remove('active');
+            btn.setAttribute('aria-selected', 'false');
+        }
+    });
+
+    // 2. Tampilkan panel tab yang sesuai
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    tabPanes.forEach(pane => {
+        if (pane.id === tabId) {
+            pane.classList.add('active');
+        } else {
+            pane.classList.remove('active');
+        }
+    });
+
+    // 3. Sinkronisasi URL Hash '#' untuk kemudahan navigasi dan bookmark
+    try {
+        if (window.location.hash !== '#' + tabId) {
+            if (history && history.replaceState) {
+                history.replaceState(null, '', '#' + tabId);
+            } else {
+                window.location.hash = '#' + tabId;
+            }
+        }
+    } catch (e) {
+        console.warn("Hash update warning:", e);
+    }
+
+    // 4. Simpan tab aktif ke sessionStorage agar konsisten
+    try {
+        sessionStorage.setItem('activeDashboardTab', tabId);
+    } catch (e) {
+        console.warn("Storage warning:", e);
+    }
+}
+
+// Listener untuk navigasi URL Hash (Back/Forward browser)
+window.addEventListener('hashchange', () => {
+    let hash = window.location.hash ? window.location.hash.substring(1) : '';
+    if (hash && document.getElementById(hash) && hash !== 'tab-manual') {
+        switchTab(hash);
+    }
+});
+
+// Inisialisasi Tab & Hak Akses saat DOM Siap
 document.addEventListener("DOMContentLoaded", () => {
+    // 1. Pasang Event Listener ke semua tombol tab
+    const tabButtons = document.querySelectorAll('.nav-tab-btn');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetTab = btn.getAttribute('data-tab');
+            if (targetTab) switchTab(targetTab);
+        });
+    });
+
+    // 2. Aktifkan tab berdasarkan URL Hash '#' atau sessionStorage (default: tab-presensi)
+    let initialTab = 'tab-presensi';
+    let hash = window.location.hash ? window.location.hash.substring(1) : '';
+    if (hash && document.getElementById(hash) && hash !== 'tab-manual') {
+        initialTab = hash;
+    } else {
+        try {
+            const saved = sessionStorage.getItem('activeDashboardTab');
+            if (saved && document.getElementById(saved) && saved !== 'tab-manual') {
+                initialTab = saved;
+            }
+        } catch (e) {}
+    }
+    switchTab(initialTab);
+
+    // 3. Terapkan Hak Akses
     terapkanHakAksesUI();
 });
 
@@ -12,8 +108,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (sessionRaw) {
             window.currentUser = JSON.parse(sessionRaw);
             
-            // Opsional: Tampilkan nama user di header dashboard jika ada elemennya
-            let elNamaHeader = document.getElementById("userDisplayName") || document.getElementById("lblNamaUser");
+            // Tampilkan nama user di header dashboard jika ada elemennya
+            let elNamaHeader = document.getElementById("lblSessionUsername") || document.getElementById("userDisplayName") || document.getElementById("lblNamaUser");
             if (elNamaHeader && window.currentUser.nama) {
                 elNamaHeader.innerText = window.currentUser.nama;
             }
@@ -26,63 +122,30 @@ document.addEventListener("DOMContentLoaded", () => {
 function terapkanHakAksesUI() {
     if (!activeUser) return;
 
-    
-    const btnHistory = document.getElementById("btnHistoryFloating");
+    const p = activeUser.permissions || {};
 
-    // Kontrol Tampil/Sembunyi Tombol Floating History
+    // 1. Kontrol Tombol Admin di Header Atas / Dropdown
+    const btnAdminHeader = document.getElementById("btnHeaderAdmin");
+    if (btnAdminHeader) {
+        btnAdminHeader.style.display = (activeUser.role === "administrator") ? "flex" : "none";
+    }
+
+    // 2. Kontrol Tombol History Floating (jika ada elemennya)
+    const btnHistory = document.getElementById("btnHistoryFloating");
     if (btnHistory) {
         if (activeUser.role === "administrator" || p.bukaHistoryFloating !== false) {
-            btnHistory.style.display = "flex";
+            btnHistory.style.display = "inline-flex";
         } else {
             btnHistory.style.display = "none";
         }
     }
 
-    // Jika Administrator, tampilkan tombol Kelola User MENGAMBANG di sebelah tombol Logout
+    // Jika Administrator, berikan akses penuh (tidak ada tombol yang disembunyikan)
     if (activeUser.role === "administrator") {
-        if (!document.getElementById("btnKelolaAdmin")) {
-            let adminBtn = document.createElement("a");
-            adminBtn.id = "btnKelolaAdmin";
-            // adminBtn.href = "admin";
-            adminBtn.href = "admin.html";
-            //link web html
-            adminBtn.className = "btn-admin-floating"; // Menggunakan class CSS khusus floating
-            adminBtn.innerHTML = "⚙️ Kelola User";
-            document.body.appendChild(adminBtn); // Tempelkan langsung ke body agar floating
-        }
-        return; 
-    }
-
-    // Jika Operator, sembunyikan tombol sesuai ON/OFF permissions dari Firebase
-    const p = activeUser.permissions || {};
-
-    // Buat Tombol Floating Buka History (Kiri Bawah) jika diizinkan
-    if (activeUser.role === "administrator" || p.bukaHistoryFloating !== false) {
-        if (!document.getElementById("btnHistoryFloating")) {
-            let histBtn = document.createElement("button");
-            histBtn.id = "btnHistoryFloating";
-            histBtn.className = "btn-history-floating";
-            histBtn.innerHTML = "🕒 Buka History Laporan";
-            histBtn.onclick = openRestoreModal;
-            document.body.appendChild(histBtn);
-        }
-    }
-
-    // Tombol Administrator Floating
-    if (activeUser.role === "administrator") {
-        if (!document.getElementById("btnKelolaAdmin")) {
-            let adminBtn = document.createElement("a");
-            adminBtn.id = "btnKelolaAdmin";
-            // adminBtn.href = "admin";
-            adminBtn.href = "admin.html";
-            //link web html
-            adminBtn.className = "btn-admin-floating";
-            adminBtn.innerHTML = "⚙️ Kelola User";
-            document.body.appendChild(adminBtn);
-        }
         return;
     }
 
+    // 3. Jika Operator, sembunyikan tombol sesuai ON/OFF permissions dari Firebase
     const elementMap = {
         uploadJadwal: document.querySelector("button[onclick='prosesExcelJadwal()']"),
         inputManualPopUp: document.querySelector("button[onclick='bukaModalPegawaiManual()']"),
@@ -154,49 +217,125 @@ function getNamaDepan(namaLengkap) {
 function toggleAuditBox() {
     let section = document.getElementById('sectionAudit');
     let btn = document.getElementById('btnToggleAudit');
+    if (!section || !btn) return;
     if (section.style.display === 'none') {
         section.style.display = 'block';
-        btn.innerText = '📋 Sembunyikan Area Keterangan Presensi';
+        btn.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Sembunyikan Area Keterangan Presensi`;
     } else {
         section.style.display = 'none';
-        btn.innerText = '📁 Tampilkan Area Keterangan Presensi';
+        btn.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Tampilkan Area Keterangan Presensi`;
     }
 }
 
 function toggleFormManual() {
     const sectionManual = document.getElementById('sectionManual');
     const btnToggle = document.getElementById('btnToggleManual');
+    if (!sectionManual || !btnToggle) return;
     if (sectionManual.style.display === 'none') {
         sectionManual.style.display = 'block';
-        btnToggle.innerText = '📂 Sembunyikan Area Update & Download Manual';
+        btnToggle.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Sembunyikan Area Update & Download Manual`;
     } else {
         sectionManual.style.display = 'none';
-        btnToggle.innerText = '📁 Tampilkan Area Update & Download Manual';
+        btnToggle.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Tampilkan Area Update & Download Manual`;
     }
 }
 
 function updateCheckboxPegawaiManual() {
     const container = document.getElementById("checkboxPegawaiList");
+    if (!container) return;
     container.innerHTML = '';
     
-    Object.keys(dataPegawai).sort((a,b) => dataPegawai[a].localeCompare(dataPegawai[b])).forEach(id => {
+    const ids = Object.keys(dataPegawai || {});
+    if (ids.length === 0) {
+        container.innerHTML = '<span style="font-size: 11.5px; color: var(--text-muted); display: block; padding: 10px 4px;">Belum ada pegawai dimuat. Silakan buat kalender shift terlebih dahulu di tab \'Impor & Sinkronisasi\'.</span>';
+        updateSelectedPegawaiBadge();
+        return;
+    }
+
+    ids.sort((a,b) => (dataPegawai[a] || '').localeCompare(dataPegawai[b] || '')).forEach(id => {
         let namaLengkap = dataPegawai[id];
         let label = document.createElement("label");
-        label.innerHTML = `<input type="checkbox" class="manual-pegawai-checkbox" value="${id}"> ${namaLengkap} (ID: ${id})`;
+        label.className = "manual-pegawai-item";
+        label.style.display = "flex";
+        label.style.alignItems = "center";
+        label.style.gap = "8px";
+        label.style.padding = "5px 6px";
+        label.style.cursor = "pointer";
+        label.style.fontSize = "12px";
+        label.style.borderRadius = "var(--radius-sm)";
+        label.innerHTML = `<input type="checkbox" class="manual-pegawai-checkbox" value="${id}" onchange="updateSelectedPegawaiBadge()" style="accent-color: var(--brand-accent); width: 14px; height: 14px; cursor: pointer; flex-shrink: 0;"> <span style="line-height: 1.3;">${namaLengkap} <small style="color: var(--text-muted); font-size: 10.5px;">(ID: ${id})</small></span>`;
         container.appendChild(label);
     });
-    document.getElementById('checkAllManual').checked = false;
+
+    const checkAll = document.getElementById('checkAllManual');
+    if (checkAll) checkAll.checked = false;
+    updateSelectedPegawaiBadge();
+}
+
+function updateSelectedPegawaiBadge() {
+    const badge = document.getElementById('selectedPegawaiCountBadge');
+    if (!badge) return;
+    const count = document.querySelectorAll('.manual-pegawai-checkbox:checked').length;
+    badge.textContent = `${count} terpilih`;
 }
 
 function toggleCheckAllManual() {
-    const isChecked = document.getElementById('checkAllManual').checked;
-    document.querySelectorAll('.manual-pegawai-checkbox').forEach(cb => cb.checked = isChecked);
+    const checkAll = document.getElementById('checkAllManual');
+    if (!checkAll) return;
+    const isChecked = checkAll.checked;
+    document.querySelectorAll('.manual-pegawai-checkbox').forEach(cb => {
+        const parentLabel = cb.closest('label');
+        if (!parentLabel || parentLabel.style.display !== 'none') {
+            cb.checked = isChecked;
+        }
+    });
+    updateSelectedPegawaiBadge();
 }
+
+function filterDrawerPegawai(query) {
+    const q = (query || '').toLowerCase().trim();
+    const container = document.getElementById('checkboxPegawaiList');
+    if (!container) return;
+    const labels = container.querySelectorAll('label');
+    labels.forEach(lbl => {
+        const text = lbl.textContent.toLowerCase();
+        if (!q || text.includes(q)) {
+            lbl.style.display = 'flex';
+        } else {
+            lbl.style.display = 'none';
+        }
+    });
+}
+
+function toggleSidePanelMassal(show) {
+    const panel = document.getElementById('sidePanelMassal');
+    const backdrop = document.getElementById('sideDrawerBackdrop');
+    if (!panel) return;
+
+    const shouldOpen = (typeof show === 'boolean') ? show : !panel.classList.contains('show');
+
+    if (shouldOpen) {
+        if (typeof updateCheckboxPegawaiManual === 'function') {
+            updateCheckboxPegawaiManual();
+        }
+        panel.classList.add('show');
+        if (backdrop) backdrop.classList.add('show');
+    } else {
+        panel.classList.remove('show');
+        if (backdrop) backdrop.classList.remove('show');
+    }
+}
+
+window.toggleSidePanelMassal = toggleSidePanelMassal;
+window.filterDrawerPegawai = filterDrawerPegawai;
+window.updateSelectedPegawaiBadge = updateSelectedPegawaiBadge;
+window.updateCheckboxPegawaiManual = updateCheckboxPegawaiManual;
+window.toggleCheckAllManual = toggleCheckAllManual;
 
 function hapusPegawaiTerpilih() {
     const checkedCheckboxes = document.querySelectorAll('.manual-pegawai-checkbox:checked');
     if (checkedCheckboxes.length === 0) {
-        alert("Pilih/centang minimal 1 pegawai yang ingin dihapus!");
+        alert("Silakan pilih minimal 1 pegawai yang ingin dihapus dari daftar.");
         return;
     }
 
@@ -206,7 +345,7 @@ function hapusPegawaiTerpilih() {
         if (dataPegawai[id]) namaTarget.push(`${dataPegawai[id]} (ID: ${id})`);
     });
 
-    let pesanKonfirmasi = `⚠️ KONFIRMASI HAPUS PEGAWAI\n\nApakah Anda YAKIN ingin menghapus ${checkedCheckboxes.length} pegawai berikut dari aplikasi?\n\n- ` + namaTarget.join('\n- ') + `\n\nSeluruh data presensi pegawai ini pada bulan/periode aktif akan DIBERSIHKAN secara permanen!`;
+    let pesanKonfirmasi = `Apakah Anda yakin ingin menghapus ${checkedCheckboxes.length} pegawai terpilih berikut?\n\n- ` + namaTarget.join('\n- ') + `\n\nCatatan: Seluruh data presensi pegawai ini pada bulan/periode aktif akan dibersihkan dari aplikasi.`;
 
     if (confirm(pesanKonfirmasi)) {
         checkedCheckboxes.forEach(cb => {
@@ -223,7 +362,7 @@ function hapusPegawaiTerpilih() {
         updateCheckboxPegawaiManual();
         updateFilterNamaDropdown();
         renderTabel();
-        alert(`✅ Berhasil menghapus ${checkedCheckboxes.length} pegawai beserta seluruh data presensinya!`);
+        alert(`Data presensi untuk ${checkedCheckboxes.length} pegawai terpilih berhasil dihapus.`);
     }
 }
 
@@ -272,25 +411,37 @@ function updateFilterKehadiranDropdown() {
 let sortCol = -1;
 let sortAsc = true;
 function sortTable(columnIndex) {
-    const table = document.getElementById("tabelAbsen");
-    const tbody = table.tBodies[0];
-    const rows = Array.from(tbody.querySelectorAll("tr"));
+    if (!window.tableDataFiltered || window.tableDataFiltered.length === 0) return;
     
     if (sortCol === columnIndex) sortAsc = !sortAsc;
     else { sortCol = columnIndex; sortAsc = true; }
 
-    rows.sort((a, b) => {
-        let valA = a.cells[columnIndex].innerText.trim();
-        let valB = b.cells[columnIndex].innerText.trim();
-        let numA = parseFloat(valA);
-        let numB = parseFloat(valB);
-        
-        if (!isNaN(numA) && !isNaN(numB) && valA.match(/^[0-9]+$/)) {
-            return sortAsc ? numA - numB : numB - numA;
+    const propMap = [
+        'no', 'id', 'nama', 'shiftTipe', 'hariStr', 'tanggalStr',
+        'statusKehadiran', 'jMasuk', 'jPulang', 'totalText', 'kelebihanTextRaw'
+    ];
+    const prop = propMap[columnIndex];
+
+    if (prop) {
+        window.tableDataFiltered.sort((a, b) => {
+            let valA = (a[prop] !== undefined) ? String(a[prop]).trim() : '';
+            let valB = (b[prop] !== undefined) ? String(b[prop]).trim() : '';
+            let numA = parseFloat(valA);
+            let numB = parseFloat(valB);
+            
+            if (!isNaN(numA) && !isNaN(numB) && valA.match(/^[0-9]+$/)) {
+                return sortAsc ? numA - numB : numB - numA;
+            }
+            return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        });
+
+        const tabelBody = document.getElementById("tabelAbsen")?.getElementsByTagName("tbody")[0];
+        if (tabelBody) {
+            tabelBody.innerHTML = "";
+            virtualRenderIndex = 0;
+            renderNextVirtualBatch();
         }
-        return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    });
-    tbody.append(...rows);
+    }
 }
 
 function getStatusKehadiran(record) {
@@ -387,13 +538,13 @@ function onShiftChangeInEdit(selectElem) {
     }
 }
 
-// 3. FUNGSI EDIT BARIS TABEL (FIXED)
+// 3. FUNGSI EDIT BARIS TABEL (COMPACT & MODERN UX)
 function editBaris(btn, key) {
     let tr = btn.closest("tr");
     tr.classList.add("sedang-diedit");
     tr.setAttribute("data-key", key); // Simpan key di elemen TR
     
-    // Panggil penampil tombol simpan
+    // Tampilkan floating edit toolbar
     tandaiAdaPerubahanTabel();
 
     let tdShift = tr.cells[3];
@@ -407,7 +558,7 @@ function editBaris(btn, key) {
     let curPulang = tdPulang.innerText !== "--" ? tdPulang.innerText : "";
     
     tdShift.innerHTML = `
-        <select class="edit-shift" onchange="onShiftChangeInEdit(this)">
+        <select class="edit-shift" onchange="onShiftChangeInEdit(this)" style="font-size: 11px; padding: 2px 4px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px;">
             <option value="P" ${curShift === 'P' ? 'selected' : ''}>P</option>
             <option value="M" ${curShift === 'M' ? 'selected' : ''}>M</option>
             <option value="OFF" ${curShift === 'OFF' ? 'selected' : ''}>OFF</option>
@@ -418,7 +569,7 @@ function editBaris(btn, key) {
     let selectedValue = isCustomStatus ? (curStatus.includes('CT') || curStatus === 'Cuti' ? 'CT' : (curStatus.includes('DL') || curStatus === 'Dinas Luar' ? 'DL' : 'CS')) : "";
 
     tdKehadiran.innerHTML = `
-        <select class="edit-kehadiran">
+        <select class="edit-kehadiran" style="font-size: 11px; padding: 2px 4px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px;">
             <option value="" ${selectedValue === '' ? 'selected' : ''}>-- Otomatis --</option>
             <option value="TK" ${curStatus === 'TK' ? 'selected' : ''}>TK</option>
             <option value="CT" ${selectedValue === 'CT' ? 'selected' : ''}>Cuti</option>
@@ -427,20 +578,36 @@ function editBaris(btn, key) {
         </select>
     `;
 
-    tdMasuk.innerHTML = `<input type="time" class="edit-input" value="${curMasuk}">`;
-    tdPulang.innerHTML = `<input type="time" class="edit-input" value="${curPulang}">`;
+    tdMasuk.innerHTML = `<input type="time" class="edit-input" value="${curMasuk}" style="font-size: 11px; padding: 1px 3px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px; width: 100%; box-sizing: border-box;">`;
+    tdPulang.innerHTML = `<input type="time" class="edit-input" value="${curPulang}" style="font-size: 11px; padding: 1px 3px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px; width: 100%; box-sizing: border-box;">`;
     
     let tdAksi = tr.cells[11];
     tdAksi.innerHTML = ` 
-        <button class="btn-hapus" onclick="" style="background:#7f8c8d;">Proses..</button>
+        <div class="table-actions-cell">
+            <button class="btn-tbl-action btn-tbl-save" onclick="simpanBarisSingle(this, '${key}')" title="Simpan perubahan baris ini">
+                <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Simpan
+            </button>
+            <button class="btn-tbl-action btn-tbl-cancel" onclick="batalEditBarisSingle(this, '${key}')" title="Batal edit baris ini">
+                <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Batal
+            </button>
+        </div>
     `;
+}
+
+function batalEditBarisSingle(btn, key) {
+    let tr = btn.closest("tr");
+    if (tr) tr.classList.remove("sedang-diedit");
+    renderTabel();
+    cekTombolSimpanSemua();
 }
 
 function simpanBarisSingle(btn, key) {
     let tr = btn.closest("tr");
     let inputs = tr.querySelectorAll(".edit-input");
-    let valMasuk = inputs[0].value;
-    let valPulang = inputs[1].value;
+    let valMasuk = inputs[0] ? inputs[0].value : "";
+    let valPulang = inputs[1] ? inputs[1].value : "";
     let selectShift = tr.querySelector(".edit-shift");
     let selectKehadiran = tr.querySelector(".edit-kehadiran");
     
@@ -472,7 +639,7 @@ function simpanBarisSingle(btn, key) {
 function simpanSemuaPerubahan() {
     const barisEdit = document.querySelectorAll('#tabelAbsen tbody tr.sedang-diedit');
     if (barisEdit.length === 0) {
-        alert("Tidak ada baris yang sedang diedit!");
+        alert("Saat ini tidak ada baris yang sedang dalam proses edit.");
         return;
     }
 
@@ -511,21 +678,26 @@ function simpanSemuaPerubahan() {
     });
 
     renderTabel();
-    alert("✅ Semua perubahan data di tabel berhasil disimpan!");
+    alert("Seluruh perubahan data presensi di tabel berhasil disimpan.");
     sembunyikanTombolEdit();
 }
 
 function cekTombolSimpanSemua() {
     const barisEdit = document.querySelectorAll('#tabelAbsen tbody tr.sedang-diedit');
+    const wrapper = document.getElementById('wrapperEditButtons');
+    const label = document.getElementById('lblModeEditActive');
     if (barisEdit.length > 0) {
-        document.getElementById('btnSimpanSemua').style.display = 'inline-block';
+        if (wrapper) wrapper.style.display = 'flex';
+        if (label) {
+            label.innerHTML = `Mode Edit Aktif <span style="background: rgba(34, 197, 94, 0.2); color: #86efac; border: 1px solid rgba(134, 239, 172, 0.4); padding: 2px 8px; border-radius: 999px; font-size: 11px; margin-left: 6px; font-weight: 700;">${barisEdit.length} data sedang diedit</span>`;
+        }
     } else {
-        document.getElementById('btnSimpanSemua').style.display = 'none';
+        if (wrapper) wrapper.style.display = 'none';
     }
 }
 
 function hapusBaris(key) {
-    if (!confirm("Kosongkan jam presensi untuk baris ini?")) return;
+    if (!confirm("Apakah Anda yakin ingin mengosongkan jam presensi untuk baris ini?")) return;
     if (globalRekap[key]) {
         globalRekap[key].waktuMasuk = null;
         globalRekap[key].waktuPulang = null;
@@ -660,20 +832,35 @@ function updateAuditBox() {
 
 function jalankanRecheck() {
     updateAuditBox();
-    alert("Data berhasil di-update!");
+    alert("Pemeriksaan presensi selesai diperbarui.");
 }
 
+// =========================================================
+// HIGH-PERFORMANCE VIRTUAL SCROLL & MEMORY OPTIMIZATION
+// =========================================================
+window.tableDataMaster = [];
+window.tableDataFiltered = [];
+let virtualRenderIndex = 0;
+const VIRTUAL_CHUNK_SIZE = 50;
+let isVirtualScrollAttached = false;
+
 function renderTabel() {
-    recheckStatusFinalReport();
+    if (typeof recheckStatusFinalReport === "function") {
+        recheckStatusFinalReport();
+    }
 
-    const tabelBody = document.getElementById('tabelAbsen').getElementsByTagName('tbody')[0];
-    tabelBody.innerHTML = ""; 
+    const tabelBody = document.getElementById('tabelAbsen')?.getElementsByTagName('tbody')[0];
+    if (!tabelBody) return;
 
-    if (Object.keys(dataPegawai).length === 0 || activeYear === null) return;
+    if (Object.keys(dataPegawai).length === 0 || activeYear === null) {
+        tabelBody.innerHTML = '<tr><td colspan="12" style="text-align: center; color: var(--text-muted); padding: 28px 0; font-size: 12.5px;">Belum ada data presensi. Silakan upload kalender shift pada menu Impor & Sinkronisasi.</td></tr>';
+        return;
+    }
 
     let daysInMonth = new Date(activeYear, activeMonth + 1, 0).getDate();
-    let counterRow = 1;
-    let employeesIds = Object.keys(dataPegawai).sort((a,b) => dataPegawai[a].localeCompare(dataPegawai[b]));
+    let employeesIds = Object.keys(dataPegawai).sort((a,b) => (dataPegawai[a] || '').localeCompare(dataPegawai[b] || ''));
+
+    window.tableDataMaster = [];
 
     employeesIds.forEach(id => {
         let nama = dataPegawai[id];
@@ -701,17 +888,19 @@ function renderTabel() {
             let totalColor = "";
             let kelebihanText = "--";
             let kelebihanColor = "";
+            let kelebihanTextRaw = "--";
 
             let trClass = "";
             if (statusKehadiran === "LJ" || record.shiftTipe === "OFF") {
                 trClass = "baris-libur";
                 kelebihanText = "<span class='teks-libur'>Libur</span>";
+                kelebihanTextRaw = "Libur";
             } else if (statusKehadiran === "CS" || statusKehadiran === "Sakit") {
                 trClass = "baris-sakit";
-                totalText = "--"; totalColor = "cukup-jam"; kelebihanText = "Sakit"; kelebihanColor = "cukup-jam";
+                totalText = "--"; totalColor = "cukup-jam"; kelebihanText = "Sakit"; kelebihanColor = "cukup-jam"; kelebihanTextRaw = "Sakit";
             } else if (statusKehadiran === "CT" || statusKehadiran === "Cuti") {
                 trClass = "baris-cuti";
-                totalText = "--"; totalColor = "cukup-jam"; kelebihanText = "Cuti"; kelebihanColor = "cukup-jam";
+                totalText = "--"; totalColor = "cukup-jam"; kelebihanText = "Cuti"; kelebihanColor = "cukup-jam"; kelebihanTextRaw = "Cuti";
             } else if (statusKehadiran.includes("TK")) {
                 trClass = "baris-tk";
             } else if (statusKehadiran.includes("TM") || statusKehadiran.includes("PC")) {
@@ -719,11 +908,11 @@ function renderTabel() {
             }
 
             if (statusKehadiran.includes("TK")) {
-                totalText = "--"; totalColor = "kurang-jam"; kelebihanText = "Tanpa Keterangan"; kelebihanColor = "kurang-jam";
+                totalText = "--"; totalColor = "kurang-jam"; kelebihanText = "Tanpa Keterangan"; kelebihanColor = "kurang-jam"; kelebihanTextRaw = "Tanpa Keterangan";
             } else if (statusKehadiran.includes("Lupa Absen")) {
-                totalText = "Lupa Absen"; totalColor = "lupa-absen"; kelebihanText = "--";
+                totalText = "Lupa Absen"; totalColor = "lupa-absen"; kelebihanText = "--"; kelebihanTextRaw = "--";
             } else if (statusKehadiran === "DL" || statusKehadiran === "Dinas Luar") {
-                totalText = "--"; totalColor = "cukup-jam"; kelebihanText = "Dinas Luar"; kelebihanColor = "cukup-jam";
+                totalText = "--"; totalColor = "cukup-jam"; kelebihanText = "Dinas Luar"; kelebihanColor = "cukup-jam"; kelebihanTextRaw = "Dinas Luar";
             } else if (statusKehadiran !== "LJ" && statusKehadiran !== "CS" && statusKehadiran !== "CT") {
                 
                 if (masukStr && pulangStr) {
@@ -761,16 +950,19 @@ function renderTabel() {
                             kelebihanText = `- ${j} J ${m} M`;
                             kelebihanColor = "kurang-jam";
                             totalColor = "kurang-jam";
+                            kelebihanTextRaw = kelebihanText;
                         } else {
                             let exc = (actualPulangTime - adjustedTargetPulangTime) / 60000;
                             if (exc > 0) {
                                 kelebihanText = `+ ${Math.floor(exc/60)} J ${Math.floor(exc%60)} M`;
                                 kelebihanColor = "cukup-jam";
                                 totalColor = "cukup-jam";
+                                kelebihanTextRaw = kelebihanText;
                             } else {
                                 kelebihanText = "0 J 0 M";
                                 kelebihanColor = "cukup-jam";
                                 totalColor = "cukup-jam";
+                                kelebihanTextRaw = "0 J 0 M";
                             }
                         }
 
@@ -811,22 +1003,26 @@ function renderTabel() {
                             kelebihanText = `- ${j} J ${m} M`;
                             kelebihanColor = "kurang-jam";
                             totalColor = "kurang-jam";
+                            kelebihanTextRaw = kelebihanText;
                         } else {
                             let exc = (actualPulangMalam - adjustedTargetPulangMalam) / 60000;
                             if (exc > 0) {
                                 kelebihanText = `+ ${Math.floor(exc/60)} J ${Math.floor(exc%60)} M`;
                                 kelebihanColor = "cukup-jam";
                                 totalColor = "cukup-jam";
+                                kelebihanTextRaw = kelebihanText;
                             } else {
                                 kelebihanText = "0 J 0 M";
                                 kelebihanColor = "cukup-jam";
                                 totalColor = "cukup-jam";
+                                kelebihanTextRaw = "0 J 0 M";
                             }
                         }
                     }
                 } else {
                     totalText = "Lupa Absen";
                     totalColor = "lupa-absen";
+                    kelebihanTextRaw = "--";
                 }
             }
 
@@ -836,69 +1032,124 @@ function renderTabel() {
             let bgShift = record.shiftTipe === "P" ? "#f1c40f" : (record.shiftTipe === "M" ? "#34495e" : "#bdc3c7");
             let colorShift = record.shiftTipe === "M" ? "white" : "black";
 
-            const baris = tabelBody.insertRow();
-            if(trClass) baris.className = trClass;
-            
-            baris.innerHTML = `
-                <td class="nomor-urut">${counterRow++}</td>
-                <td>${id}</td>
-                <td>${nama}</td>
-                <td><span class="shift-badge" style="background:${bgShift}; color:${colorShift};">${record.shiftTipe || "-"}</span></td>
-                <td>${hariStr}</td>
-                <td>${tanggalStr}</td>
-                <td><span class="status-badge ${badgeClass}">${statusKehadiran}</span></td>
-                <td>${jMasuk}</td>
-                <td>${jPulang}</td>
-                <td class="${totalColor}">${totalText}</td>
-                <td class="${kelebihanColor}">${kelebihanText}</td>
-                <td>
-                    <button class="btn-edit" onclick="editBaris(this, '${key}')">Edit</button>
-                    <button class="btn-hapus" onclick="hapusBaris('${key}')">Reset</button>
-                </td>
-            `;
+            window.tableDataMaster.push({
+                key: key,
+                id: id,
+                nama: nama,
+                role: record.role || "STAFF",
+                shiftTipe: record.shiftTipe,
+                bgShift: bgShift,
+                colorShift: colorShift,
+                hariStr: hariStr,
+                tanggalStr: tanggalStr,
+                statusKehadiran: statusKehadiran,
+                badgeClass: badgeClass,
+                jMasuk: jMasuk,
+                jPulang: jPulang,
+                totalText: totalText,
+                totalColor: totalColor,
+                kelebihanText: kelebihanText,
+                kelebihanColor: kelebihanColor,
+                kelebihanTextRaw: kelebihanTextRaw,
+                trClass: trClass
+            });
         }
     });
+
     filterTabel();
     updateAuditBox(); 
     updateFilterKehadiranDropdown();
     cekTombolSimpanSemua();
-
-    // Panggil pengecekan status tombol Save Report Final setiap kali tabel di-render
-    if (typeof recheckStatusFinalReport === "function") {
-    recheckStatusFinalReport();
-}
 }
 
 function filterTabel() {
-    const filterRole = document.getElementById('filterRole').value;
-    const filterNama = document.getElementById('filterNama').value;
-    const filterTanggal = document.getElementById('filterTanggal').value.toLowerCase();
-    const filterKehadiran = document.getElementById('filterKehadiran').value;
-    const rows = document.querySelectorAll('#tabelAbsen tbody tr');
-    
-    let visibleIndex = 1;
-    rows.forEach(row => {
-        const idCell = row.cells[1].innerText;
-        const namaCell = row.cells[2].innerText.toLowerCase();
-        const tanggalCell = row.cells[5].innerText.toLowerCase();
-        const kehadiranCell = row.cells[6].innerText.trim();
-        
-        let role = "STAFF";
-        let firstKey = Object.keys(globalRekap).find(k => k.startsWith(idCell + "_"));
-        if (firstKey) role = globalRekap[firstKey].role || "STAFF";
+    const filterRole = (document.getElementById('filterRole')?.value || '').trim();
+    const filterNama = (document.getElementById('filterNama')?.value || '').toLowerCase().trim();
+    const filterTanggal = (document.getElementById('filterTanggal')?.value || '').toLowerCase().trim();
+    const filterKehadiran = (document.getElementById('filterKehadiran')?.value || '').trim();
 
-        let matchRole = (filterRole === "" || role === filterRole);
-        let matchNama = (filterNama === "" || namaCell === filterNama.toLowerCase());
-        let matchTanggal = tanggalCell.includes(filterTanggal);
-        let matchKehadiran = (filterKehadiran === "" || kehadiranCell === filterKehadiran);
-        
-        if (matchRole && matchNama && matchTanggal && matchKehadiran) {
-            row.style.display = '';
-            row.cells[0].innerText = visibleIndex++;
-        } else {
-            row.style.display = 'none';
-        }
+    if (!window.tableDataMaster) window.tableDataMaster = [];
+
+    // Filter array di memori tanpa manipulasi DOM berulang (hemat RAM dan respon instan)
+    window.tableDataFiltered = window.tableDataMaster.filter(item => {
+        if (filterRole && item.role !== filterRole) return false;
+        if (filterNama && !item.nama.toLowerCase().includes(filterNama)) return false;
+        if (filterTanggal && !item.tanggalStr.toLowerCase().includes(filterTanggal)) return false;
+        if (filterKehadiran && item.statusKehadiran !== filterKehadiran) return false;
+        return true;
     });
+
+    const tabelBody = document.getElementById('tabelAbsen')?.getElementsByTagName('tbody')[0];
+    if (!tabelBody) return;
+    tabelBody.innerHTML = "";
+    virtualRenderIndex = 0;
+
+    if (window.tableDataFiltered.length === 0) {
+        tabelBody.innerHTML = '<tr><td colspan="12" style="text-align: center; color: var(--text-muted); padding: 24px 0; font-size: 12px;">Tidak ada data yang cocok dengan filter pencarian.</td></tr>';
+        return;
+    }
+
+    renderNextVirtualBatch();
+
+    if (!isVirtualScrollAttached) {
+        const tableWrapper = document.querySelector('.table-wrapper');
+        if (tableWrapper) {
+            tableWrapper.addEventListener('scroll', () => {
+                if (tableWrapper.scrollTop + tableWrapper.clientHeight >= tableWrapper.scrollHeight - 160) {
+                    renderNextVirtualBatch();
+                }
+            }, { passive: true });
+            isVirtualScrollAttached = true;
+        }
+    }
+}
+
+function renderNextVirtualBatch() {
+    if (!window.tableDataFiltered || window.tableDataFiltered.length === 0) return;
+    if (virtualRenderIndex >= window.tableDataFiltered.length) return;
+
+    const tabelBody = document.getElementById('tabelAbsen')?.getElementsByTagName('tbody')[0];
+    if (!tabelBody) return;
+
+    const endIndex = Math.min(virtualRenderIndex + VIRTUAL_CHUNK_SIZE, window.tableDataFiltered.length);
+    const fragment = document.createDocumentFragment();
+
+    for (let i = virtualRenderIndex; i < endIndex; i++) {
+        const item = window.tableDataFiltered[i];
+        const tr = document.createElement('tr');
+        if (item.trClass) tr.className = item.trClass;
+        tr.setAttribute('data-key', item.key);
+
+        tr.innerHTML = `
+            <td class="nomor-urut">${i + 1}</td>
+            <td>${item.id}</td>
+            <td>${item.nama}</td>
+            <td><span class="shift-badge" style="background:${item.bgShift}; color:${item.colorShift};">${item.shiftTipe || "-"}</span></td>
+            <td>${item.hariStr}</td>
+            <td>${item.tanggalStr}</td>
+            <td><span class="status-badge ${item.badgeClass}">${item.statusKehadiran}</span></td>
+            <td>${item.jMasuk}</td>
+            <td>${item.jPulang}</td>
+            <td class="${item.totalColor}">${item.totalText}</td>
+            <td class="${item.kelebihanColor}">${item.kelebihanText}</td>
+            <td>
+                <div class="table-actions-cell">
+                    <button class="btn-tbl-action btn-tbl-edit" onclick="editBaris(this, '${item.key}')" title="Edit jam / status baris ini">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Edit
+                    </button>
+                    <button class="btn-tbl-action btn-tbl-reset" onclick="hapusBaris('${item.key}')" title="Kosongkan jam presensi baris ini">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                        Reset
+                    </button>
+                </div>
+            </td>
+        `;
+        fragment.appendChild(tr);
+    }
+
+    tabelBody.appendChild(fragment);
+    virtualRenderIndex = endIndex;
 }
 
 function resetFilter() {
@@ -913,7 +1164,7 @@ function resetFilter() {
 function prosesExcelJadwal() {
     const fileInput = document.getElementById('uploadJadwal');
     const file = fileInput.files[0];
-    if (!file) { alert("Pilih file Excel Jadwal Shift terlebih dahulu!"); return; }
+    if (!file) { alert("Silakan pilih file Excel Jadwal Shift terlebih dahulu."); return; }
 
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -997,9 +1248,9 @@ function prosesExcelJadwal() {
             updateFilterNamaDropdown();
             document.getElementById('sectionPresensi').style.display = 'block';
             renderTabel();
-            alert("✅ Jadwal Shift berhasil dibuat! Silakan upload file data Fingerprint untuk mengisi jam kehadiran.");
+            alert("Jadwal shift berhasil dibuat. Silakan unggah file data fingerprint untuk melengkapi jam kehadiran.");
 
-        } catch (error) { alert("❌ Gagal membaca Jadwal: " + error.message); }
+        } catch (error) { alert("Mohon maaf, terjadi kendala saat membaca file jadwal: " + error.message); }
     };
     reader.readAsArrayBuffer(file);
 }
@@ -1007,7 +1258,7 @@ function prosesExcelJadwal() {
 function prosesExcel() {
     const fileInput = document.getElementById('uploadExcel');
     const file = fileInput.files[0];
-    if (!file) { alert("Pilih file Excel Fingerprint terlebih dahulu!"); return; }
+    if (!file) { alert("Silakan pilih file Excel Fingerprint terlebih dahulu."); return; }
 
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -1075,7 +1326,7 @@ function prosesExcel() {
         isFingerprintUploaded = true; 
         document.getElementById('sectionManualWrapper').style.display = 'block'; 
         renderTabel();
-        alert("✅ Data Mesin Absen berhasil di-Integrasikan (dan me-replace data absen mesin sebelumnya)!");
+        alert("Data mesin absensi berhasil diintegrasikan dengan jadwal presensi.");
     };
     reader.readAsArrayBuffer(file);
 }
@@ -1087,7 +1338,7 @@ function tambahDataManual() {
     const ket = document.getElementById('ketManual').value;
 
     if (checkedCheckboxes.length === 0 || !tanggal || !jam) { 
-        alert("Pilih minimal 1 pegawai menggunakan centang checkbox, lengkapi Tanggal, dan Jam!"); 
+        alert("Silakan pilih minimal satu pegawai, serta pastikan tanggal dan jam telah terisi."); 
         return; 
     }
 
@@ -1109,21 +1360,21 @@ function tambahDataManual() {
     document.getElementById('jamManual').value = ""; 
     document.getElementById('btnUndoMassal').disabled = false; 
     renderTabel();
-    alert(`✅ Berhasil mengupdate data presensi untuk ${successCount} pegawai terpilih!\n\n(Catatan: Jika salah isi, Anda bisa mengklik tombol '↩ Undo 1 Langkah' untuk membatalkan)`);
+    alert(`Data presensi untuk ${successCount} pegawai terpilih berhasil diperbarui.\n\n(Catatan: Anda dapat menggunakan tombol 'Undo' jika ingin membatalkan perubahan terakhir).`);
 }
 
 function undoUpdateMassal() {
     if (!lastRekapState) {
-        alert("Tidak ada riwayat perubahan massal sebelumnya yang dapat di-undo.");
+        alert("Belum ada riwayat perubahan sebelumnya yang dapat dibatalkan.");
         return;
     }
 
-    if (confirm("Apakah Anda yakin ingin MENGEMBALIKAN data presensi ke posisi sebelum update massal terakhir dilakukan?")) {
+    if (confirm("Apakah Anda ingin membatalkan perubahan presensi dan mengembalikannya ke posisi sebelumnya?")) {
         globalRekap = JSON.parse(JSON.stringify(lastRekapState));
         lastRekapState = null; 
         document.getElementById('btnUndoMassal').disabled = true; 
         renderTabel();
-        alert("↩ Berhasil mengembalikan (undo) data presensi ke posisi semula!");
+        alert("Perubahan data presensi berhasil dibatalkan dan dikembalikan ke posisi semula.");
     }
 }
 
@@ -1179,10 +1430,25 @@ function cleanStatusForExport(statusStr) {
 }
 
 function getVisibleData() {
+    if (window.tableDataFiltered && window.tableDataFiltered.length > 0) {
+        return window.tableDataFiltered.map((item, idx) => ({
+            "No": String(idx + 1),
+            "ID Pegawai": item.id || "",
+            "Nama Pegawai": item.nama || "",
+            "Shift": item.shiftTipe || "-",
+            "Hari": item.hariStr || "",
+            "Tanggal": item.tanggalStr || "",
+            "Kehadiran": item.statusKehadiran || "",
+            "Jam Masuk": item.jMasuk || "--",
+            "Jam Pulang": item.jPulang || "--",
+            "Total Waktu": item.totalText || "0 J 0 M",
+            "Ket/Kelebihan": item.kelebihanText || "0 M"
+        }));
+    }
     const rows = document.querySelectorAll('#tabelAbsen tbody tr');
     let data = [];
     rows.forEach(row => {
-        if (row.style.display !== 'none') {
+        if (row.style.display !== 'none' && row.cells.length >= 11) {
             data.push({
                 "No": row.cells[0].innerText,
                 "ID Pegawai": row.cells[1].innerText,
@@ -1202,37 +1468,54 @@ function getVisibleData() {
 }
 
 function getAllData() {
+    if (window.tableDataMaster && window.tableDataMaster.length > 0) {
+        return window.tableDataMaster.map((item, idx) => ({
+            "No": String(idx + 1),
+            "ID Pegawai": item.id || "",
+            "Nama Pegawai": item.nama || "",
+            "Shift": item.shiftTipe || "-",
+            "Hari": item.hariStr || "",
+            "Tanggal": item.tanggalStr || "",
+            "Kehadiran": item.statusKehadiran || "",
+            "Jam Masuk": item.jMasuk || "--",
+            "Jam Pulang": item.jPulang || "--",
+            "Total Waktu": item.totalText || "0 J 0 M",
+            "Ket/Kelebihan": item.kelebihanText || "0 M"
+        }));
+    }
     const rows = document.querySelectorAll('#tabelAbsen tbody tr');
     let data = [];
     rows.forEach(row => {
-        data.push({
-            "No": row.cells[0].innerText,
-            "ID Pegawai": row.cells[1].innerText,
-            "Nama Pegawai": row.cells[2].innerText,
-            "Shift": row.cells[3].innerText,
-            "Hari": row.cells[4].innerText,
-            "Tanggal": row.cells[5].innerText,
-            "Kehadiran": row.cells[6].innerText,
-            "Jam Masuk": row.cells[7].innerText,
-            "Jam Pulang": row.cells[8].innerText,
-            "Total Waktu": row.cells[9].innerText,
-            "Ket/Kelebihan": row.cells[10].innerText
-        });
+        if (row.cells.length >= 11) {
+            data.push({
+                "No": row.cells[0].innerText,
+                "ID Pegawai": row.cells[1].innerText,
+                "Nama Pegawai": row.cells[2].innerText,
+                "Shift": row.cells[3].innerText,
+                "Hari": row.cells[4].innerText,
+                "Tanggal": row.cells[5].innerText,
+                "Kehadiran": row.cells[6].innerText,
+                "Jam Masuk": row.cells[7].innerText,
+                "Jam Pulang": row.cells[8].innerText,
+                "Total Waktu": row.cells[9].innerText,
+                "Ket/Kelebihan": row.cells[10].innerText
+            });
+        }
     });
     return data;
 }
 
 function exportSemuaExcel() {
-    if (!confirm("Apakah Anda yakin ingin mengeksport SEMUA data presensi yang tertampil ke file Excel?")) return;
+    if (!confirm("Apakah Anda ingin mengunduh seluruh data presensi yang sedang ditampilkan ke dalam format Excel?")) return;
     const data = getVisibleData();
-    if(data.length === 0) return alert("Tidak ada data untuk diexport!");
+    if(data.length === 0) return alert("Belum ada data presensi yang dapat diekspor.");
     generateExcel(data, `Rekap_Kehadiran_Semua_${namaBulanTahun.replace(" ", "_")}`);
 }
 
 function previewSemuaPDF() {
-    if (!confirm("Apakah Anda yakin ingin melihat PREVIEW PDF untuk SEMUA data presensi yang tertampil?")) return;
+    if (!confirm("Apakah Anda ingin menampilkan pratinjau PDF untuk seluruh data presensi yang sedang aktif?")) return;
     const data = getVisibleData();
-    if(data.length === 0) return alert("Tidak ada data untuk dipreview!");
+    if(data.length === 0) return alert("Belum ada data presensi yang dapat ditampilkan pratinjaunya.");
     
     const namaUnik = [...new Set(data.map(item => item["Nama Pegawai"]))];
     let listGroupedData = [];
@@ -1247,10 +1530,10 @@ function previewSemuaPDF() {
 
 function prosesBatchExport(tipe) {
     const checkboxes = document.querySelectorAll('.manual-pegawai-checkbox:checked');
-    if(checkboxes.length === 0) return alert("Pilih minimal 1 pegawai di area Update/Download Manual ini!");
+    if(checkboxes.length === 0) return alert("Silakan pilih minimal satu pegawai di daftar terlebih dahulu.");
     
     let pesanAksi = (tipe === 'excel') ? "Export Excel Terpilih" : "Export PDF Terpilih";
-    if (!confirm(`Apakah Anda yakin ingin melakukan [${pesanAksi}] untuk ${checkboxes.length} pegawai yang dicentang?`)) return;
+    if (!confirm(`Apakah Anda ingin memproses ${pesanAksi} untuk ${checkboxes.length} pegawai yang dipilih?`)) return;
 
     const semuaData = getAllData();
 
@@ -1523,11 +1806,11 @@ function generatePDFMultiPagePreview(listGroupedData) {
 
 function exportPreviewPDFLandscape() {
     if (typeof globalRekap === "undefined" || Object.keys(globalRekap).length === 0) {
-        alert("⚠️ Tidak ada data presensi yang dapat diexport!");
+        alert("Belum ada data presensi yang dapat diekspor.");
         return;
     }
 
-    const yakin = confirm("Apakah Anda yakin ingin membuka Preview PDF Rekap Kehadiran Pegawai (Landscape)?");
+    const yakin = confirm("Apakah Anda ingin membuka pratinjau PDF Rekap Kehadiran Pegawai (Landscape)?");
     if (!yakin) return;
 
     // Persiapkan Data Pegawai & Jumlah Hari dalam Bulan (misal 31 hari untuk Juli 2026)
@@ -1539,7 +1822,7 @@ function exportPreviewPDFLandscape() {
 
 function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari, tipeSpesimen = "manual") {
     if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert("❌ Library jsPDF / AutoTable belum dimuat!");
+        alert("Komponen pembuat PDF (jsPDF) belum siap. Silakan muat ulang halaman.");
         return;
     }
 
@@ -2039,7 +2322,7 @@ let tempGroupedByRole = {};
 window.exportPreviewPDFLandscape = function() {
     try {
         if (typeof globalRekap === "undefined" || !globalRekap || Object.keys(globalRekap).length === 0) {
-            alert("⚠️ Data presensi Rekap Final masih kosong!");
+            alert("Belum ada data presensi yang tersedia untuk laporan.");
             return;
         }
 
@@ -2108,7 +2391,7 @@ window.exportPreviewPDFLandscape = function() {
 
         const availableRoles = Object.keys(tempGroupedByRole).sort();
         if (availableRoles.length === 0) {
-            alert("⚠️ Tidak ada kategori pegawai yang ditemukan!");
+            alert("Tidak ditemukan kategori pegawai pada data yang dipilih.");
             return;
         }
 
@@ -2154,7 +2437,7 @@ window.exportPreviewPDFLandscape = function() {
 
     } catch (err) {
         console.error("Error pada Buka Modal PDF Landscape:", err);
-        alert("❌ Terjadi Error:\n" + err.message);
+        alert("Mohon maaf, terjadi kendala saat memproses pratinjau PDF:\n" + err.message);
     }
 };
 
@@ -2186,7 +2469,7 @@ function tutupModalKategoriPdf() {
 function prosesExportPdfLandscapeDenganPilihan() {
     const checkedBoxes = document.querySelectorAll(".cb-kategori-pdf:checked");
     if (checkedBoxes.length === 0) {
-        alert("⚠️ Pilih minimal 1 kategori pegawai yang ingin diexport!");
+        alert("Silakan pilih minimal satu kategori pegawai untuk diekspor.");
         return;
     }
 
@@ -2206,7 +2489,7 @@ function prosesExportPdfLandscapeDenganPilihan() {
     // --- KONFIRMASI AKHIR SEBELUM TAMPIL FILE ---
     const daftarRoleStr = selectedRoleKeys.join(", ");
     const jenisTTDStr = tipeSpesimen === "anchor" ? "Anchor DS ($)" : "TTD Manual";
-    const yakin = confirm(`Apakah Anda yakin ingin membuka Preview PDF Rekap Kehadiran Pegawai (Landscape)?\n\n👉 Kategori: [ ${daftarRoleStr} ]\n👉 Spesimen TTD: ${jenisTTDStr}`);
+    const yakin = confirm(`Apakah Anda ingin membuka pratinjau PDF Rekap Kehadiran Pegawai (Landscape)?\n\n• Kategori: ${daftarRoleStr}\n• Spesimen TTD: ${jenisTTDStr}`);
     
     if (!yakin) return;
 
@@ -2214,7 +2497,7 @@ function prosesExportPdfLandscapeDenganPilihan() {
     tutupModalKategoriPdf();
 
     if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert("❌ Library jsPDF / AutoTable belum terpasang!");
+        alert("Komponen pembuat PDF (jsPDF) belum siap. Silakan muat ulang halaman.");
         return;
     }
 
@@ -2223,3 +2506,62 @@ function prosesExportPdfLandscapeDenganPilihan() {
     // Jalankan Generator PDF dengan membawa parameter tipeSpesimen
     generatePDFLandscapeChunked(filteredGroupedByRole, selectedRoleKeys, totalHari, tipeSpesimen);
 }
+
+// =========================================================
+// UNIVERSAL MODAL & DRAWER CLOSE (CLICK OUTSIDE & ESC KEY)
+// =========================================================
+window.addEventListener('click', (e) => {
+    // 1. Tutup modal jika user mengklik area backdrop/overlay di luar modal content
+    if (e.target && (e.target.classList.contains('modal-backdrop') || e.target.classList.contains('modal-overlay'))) {
+        // Pengecualian: jangan tutup modal proses restore progress otomatis
+        if (e.target.id === 'modalRestoreProgress') return;
+
+        const id = e.target.id;
+        if (id === 'modalLogout' && typeof tutupModalLogout === 'function') tutupModalLogout();
+        else if (id === 'modalLogoutAdmin' && typeof tutupModalLogoutAdmin === 'function') tutupModalLogoutAdmin();
+        else if (id === 'modalRestore' && typeof tutupModalRestore === 'function') tutupModalRestore();
+        else if (id === 'modalPegawaiManual' && typeof tutupModalPegawaiManual === 'function') tutupModalPegawaiManual();
+        else if (id === 'modalBulkText' && typeof tutupModalBulkText === 'function') tutupModalBulkText();
+        else if (id === 'modalFinalHistory' && typeof tutupModalFinalHistory === 'function') tutupModalFinalHistory();
+        else if (id === 'modalPilihKategori' && typeof tutupModalKategoriPdf === 'function') tutupModalKategoriPdf();
+        else if (id === 'modalHapusHistory' && typeof tutupModalHapusHistory === 'function') tutupModalHapusHistory();
+        else {
+            e.target.style.display = 'none';
+        }
+    }
+});
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+        // 1. Tutup child modal bulk text terlebih dahulu jika sedang terbuka
+        const bulkText = document.getElementById('modalBulkText');
+        if (bulkText && bulkText.style.display !== 'none' && typeof tutupModalBulkText === 'function') {
+            tutupModalBulkText();
+            return;
+        }
+
+        // 2. Tutup modal lain yang aktif
+        const openModal = Array.from(document.querySelectorAll('.modal-backdrop, .modal-overlay')).find(el => {
+            return el.id !== 'modalRestoreProgress' && el.style.display !== 'none' && window.getComputedStyle(el).display !== 'none';
+        });
+
+        if (openModal) {
+            const id = openModal.id;
+            if (id === 'modalLogout' && typeof tutupModalLogout === 'function') tutupModalLogout();
+            else if (id === 'modalLogoutAdmin' && typeof tutupModalLogoutAdmin === 'function') tutupModalLogoutAdmin();
+            else if (id === 'modalRestore' && typeof tutupModalRestore === 'function') tutupModalRestore();
+            else if (id === 'modalPegawaiManual' && typeof tutupModalPegawaiManual === 'function') tutupModalPegawaiManual();
+            else if (id === 'modalFinalHistory' && typeof tutupModalFinalHistory === 'function') tutupModalFinalHistory();
+            else if (id === 'modalPilihKategori' && typeof tutupModalKategoriPdf === 'function') tutupModalKategoriPdf();
+            else if (id === 'modalHapusHistory' && typeof tutupModalHapusHistory === 'function') tutupModalHapusHistory();
+            else openModal.style.display = 'none';
+            return;
+        }
+
+        // 3. Tutup Side Drawer Massal jika terbuka
+        const drawer = document.getElementById('sidePanelMassal');
+        if (drawer && drawer.classList.contains('show') && typeof toggleSidePanelMassal === 'function') {
+            toggleSidePanelMassal(false);
+        }
+    }
+});
