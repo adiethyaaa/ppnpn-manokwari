@@ -2004,10 +2004,12 @@ input:checked + .slider:before { transform: translateX(18px); }
     flex-shrink: 0;
 }
 
-.btn-hapus-pegawai {
-    background-color: #ffffff;
-    color: #b91c1c;
-    border: 1px solid #fca5a5;
+.btn-hapus-pegawai,
+.btn-hapus,
+#btnConfirmHapusHistory {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+    border: 1px solid #b91c1c !important;
     border-radius: var(--radius-sm);
     height: 34px;
     font-size: 12px;
@@ -2020,10 +2022,19 @@ input:checked + .slider:before { transform: translateX(18px); }
     transition: all 0.15s ease;
 }
 
-.btn-hapus-pegawai:hover {
-    background-color: #fef2f2;
-    border-color: #f87171;
-    color: #991b1b;
+.btn-hapus-pegawai svg,
+.btn-hapus svg,
+#btnConfirmHapusHistory svg {
+    stroke: #ffffff !important;
+}
+
+.btn-hapus-pegawai:hover,
+.btn-hapus:hover,
+#btnConfirmHapusHistory:hover {
+    background-color: #b91c1c !important;
+    border-color: #991b1b !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
 }
 
 /* =========================================================
@@ -2170,4 +2181,974 @@ tr.sedang-diedit td {
     background-color: #047857;
     box-shadow: 0 4px 10px rgba(5, 150, 105, 0.35);
     transform: translateY(-1px);
+}
+
+/* Badge Jadwal Libur (Merger Kolom Jam Masuk & Pulang untuk Kehadiran LJ/OFF) */
+.badge-jadwal-libur {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background-color: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 12px;
+    border-radius: 9999px;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.03);
+}
+
+/* Badge No Record (Saru, tipis, muted untuk Total Waktu Kosong) */
+.badge-no-record {
+    display: inline-block;
+    color: #94a3b8;
+    font-size: 11px;
+    font-style: italic;
+    font-weight: 400;
+    opacity: 0.75;
+    letter-spacing: 0.2px;
+    user-select: none;
+}
+
+/* ==========================================================================
+   TAB REKAP KEHADIRAN & ADMIN MASTER PEGAWAI
+   ========================================================================== */
+.rekap-toolbar-card {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.rekap-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.rekap-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.rekap-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.rekap-stat-card {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.rekap-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.rekap-stat-val {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.1;
+}
+
+.badge-rekap-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    padding: 2px 8px;
+    font-size: 11.5px;
+    font-weight: 700;
+    border-radius: 9999px;
+}
+
+.badge-rekap-hn { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.badge-rekap-tk { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+.badge-rekap-cs { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.badge-rekap-ct { background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.badge-rekap-dl { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+
+/* Admin Master Database Pegawai Styling */
+.admin-db-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.admin-inject-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.db-pegawai-table-wrapper {
+    max-height: 420px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+}
+
+.badge-kontrak {
+    display: inline-flex;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    background: #f8fafc;
+    color: #334155;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Subtabs Master Pegawai (Tab Kiri: Pegawai Aktif & Tab Kanan: Pegawai Tidak Aktif) */
+.subtab-pegawai-container {
+    display: flex;
+    gap: 10px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+}
+
+.subtab-pegawai-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: #f8fafc;
+    border: 1px solid var(--border-subtle);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.subtab-pegawai-btn:hover {
+    color: var(--text-primary);
+    background: #f1f5f9;
+}
+
+.subtab-pegawai-btn.active {
+    color: #ffffff;
+    background: #1e293b;
+    border-color: #0f172a;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.15);
+}
+
+.subtab-pegawai-btn.active.tab-aktif {
+    background: #059669;
+    border-color: #047857;
+}
+
+.subtab-pegawai-btn.active.tab-tidak-aktif {
+    background: #dc2626;
+    border-color: #b91c1c;
+}
+
+.subtab-pegawai-btn.active .badge-subtab-count {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+.badge-subtab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.badge-status-aktif {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.badge-status-tidak-aktif {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* =========================================================
+   PEMISAH TEGAS SECTION: REKAP KEHADIRAN VS MASTER PEGAWAI
+   ========================================================= */
+.section-divider-bold {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 32px 0 18px 0;
+    position: relative;
+}
+
+.divider-line-bold {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(148, 163, 184, 0.15) 0%, rgba(51, 65, 85, 0.45) 50%, rgba(148, 163, 184, 0.15) 100%);
+    border-radius: 2px;
+}
+
+.divider-tag-bold {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    background: #0f172a;
+    color: #f8fafc;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+    white-space: nowrap;
+}
+
+.master-pegawai-card {
+    border-top: 3px solid #0284c7 !important;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+    padding: 16px 18px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* TABEL COMPACT MASTER PEGAWAI: FONT KECIL & MINIM SCROLL */
+.db-pegawai-table-compact {
+    max-height: 440px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+}
+
+.db-pegawai-table-compact table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.db-pegawai-table-compact th {
+    padding: 6px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #f8fafc;
+    color: #475569;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.db-pegawai-table-compact td {
+    padding: 4px 7px;
+    font-size: 11px;
+    border-bottom: 1px solid var(--border-subtle);
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.db-pegawai-table-compact tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* DATE PICKER FLEKSIBEL (PILIH KALENDER & KETIK LANGSUNG) */
+.date-input-flexible {
+    font-family: inherit;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.date-input-flexible::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 2px;
+    border-radius: 3px;
+    transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.date-input-flexible::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    background: #e2e8f0;
+}
+
+/* =========================================================
+   MODAL MASTER PEGAWAI REDESIGN (SWISS STYLE & CLEAN LAYOUT)
+   ========================================================= */
+.modal-master-dialog {
+    background: #ffffff;
+    width: 94%;
+    max-width: 720px;
+    max-height: 88vh;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalMasterFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalMasterFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-master-header {
+    padding: 14px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-shrink: 0;
+}
+
+.modal-master-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modal-master-icon-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modal-master-title {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.3;
+}
+
+.modal-master-subtitle {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.badge-mode-master {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    display: inline-block;
+}
+
+.badge-mode-tambah {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.badge-mode-edit {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.modal-close-btn {
+    background: transparent;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s ease;
+}
+
+.modal-close-btn:hover {
+    background: #f1f5f9;
+    color: var(--text-primary);
+}
+
+.modal-master-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: #f8fafc;
+}
+
+.modal-master-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-master-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.modal-master-body::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.modal-section-card {
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    border-radius: 9px;
+    padding: 12px 16px 14px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.modal-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--border-subtle);
+}
+
+.modal-section-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modal-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.1px;
+}
+
+.modal-section-desc {
+    font-size: 10.5px;
+    color: var(--text-muted);
+}
+
+.modal-section-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 14px;
+}
+
+.form-group-custom {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form-group-custom.full-span {
+    grid-column: span 2;
+}
+
+.modal-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.modal-input,
+.modal-select {
+    width: 100%;
+    height: 33px;
+    padding: 0 10px;
+    font-size: 12px;
+    color: var(--text-primary);
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.modal-input:focus,
+.modal-select:focus {
+    outline: none;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.modal-input:read-only {
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+    border-color: #e2e8f0 !important;
+    cursor: not-allowed;
+}
+
+.input-micro-hint {
+    font-size: 10px;
+    color: #94a3b8;
+    line-height: 1.25;
+}
+
+.jobset-banner-card {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-left: 3.5px solid #0284c7;
+    border-radius: 7px;
+    padding: 9px 12px;
+    margin-top: 4px;
+}
+
+.jobset-banner-icon {
+    color: #0284c7;
+    margin-top: 1px;
+    flex-shrink: 0;
+}
+
+.jobset-banner-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0369a1;
+    line-height: 1.3;
+}
+
+.jobset-banner-desc {
+    font-size: 11px;
+    color: #334155;
+    margin-top: 2px;
+    line-height: 1.35;
+}
+
+.modal-master-footer {
+    padding: 12px 20px;
+    background: #ffffff;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.modal-footer-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.modal-footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-modal-cancel {
+    height: 33px;
+    padding: 0 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-modal-cancel:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #1e293b;
+}
+
+.btn-modal-save {
+    height: 33px;
+    padding: 0 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    background: #059669;
+    border: 1px solid #047857;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: all 0.15s ease;
+}
+
+.btn-modal-save:hover {
+    background: #047857;
+    box-shadow: 0 2px 5px rgba(4, 120, 87, 0.25);
+}
+
+@media (max-width: 600px) {
+    .modal-section-grid {
+        grid-template-columns: 1fr;
+    }
+    .form-group-custom.full-span {
+        grid-column: span 1;
+    }
+    .modal-footer-info {
+        display: none;
+    }
+    .modal-master-footer {
+        justify-content: flex-end;
+    }
+}
+
+/* =========================================================
+   TABEL DATABASE PEGAWAI: BADGE MASA KONTRAK 2 BARIS & STATUS ABU-ABU
+   ========================================================= */
+.kontrak-cell-box {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1.25;
+    text-align: left;
+}
+
+.kontrak-row {
+    display: flex;
+    align-items: center;
+    gap: 4.5px;
+    font-size: 10.5px;
+}
+
+.badge-kontrak-tag {
+    font-size: 8.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    line-height: 1.15;
+    flex-shrink: 0;
+}
+
+.badge-kontrak-mulai {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.badge-kontrak-akhir {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.badge-kontrak-nonaktif {
+    font-size: 10px;
+    color: #94a3b8;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+    font-style: italic;
+    display: inline-block;
+}
+
+.kontrak-tgl {
+    font-size: 10.5px;
+    color: #334155;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* BARIS DATA PEGAWAI TIDAK AKTIF (WARNA ABU-ABU) */
+tr.row-pegawai-tidak-aktif {
+    background-color: #f8fafc !important;
+}
+
+tr.row-pegawai-tidak-aktif td {
+    background-color: #f8fafc !important;
+    color: #64748b !important;
+}
+
+tr.row-pegawai-tidak-aktif td strong,
+tr.row-pegawai-tidak-aktif td span:not(.badge-status-tidak-aktif):not(.badge-kontrak-tag):not(.badge-kontrak-nonaktif),
+tr.row-pegawai-tidak-aktif .kontrak-tgl {
+    color: #64748b !important;
+}
+
+tr.row-pegawai-tidak-aktif .badge-kontrak-tag {
+    opacity: 0.65;
+}
+
+tr.row-pegawai-tidak-aktif:hover td {
+    background-color: #f1f5f9 !important;
+}
+
+/* =========================================================
+   POPUP MODAL ALERT: CEK SISA CUTI TAHUNAN
+   ========================================================= */
+.modal-sisa-cuti-dialog {
+    max-width: 440px;
+    width: 92%;
+    border-radius: 12px;
+    padding: 0;
+    background: #ffffff;
+    box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalMasterFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-sisa-cuti-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+}
+
+.modal-sisa-cuti-icon-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #16a34a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modal-sisa-cuti-body {
+    padding: 16px 20px;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sisa-cuti-hero-card {
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 16px 14px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sisa-cuti-hero-label {
+    font-size: 13px;
+    color: #475569;
+    font-weight: 600;
+}
+
+.sisa-cuti-nama-highlight {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.badge-sisa-cuti {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 24px;
+    border-radius: 999px;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.badge-sisa-cuti-hijau {
+    background: #ecfdf5;
+    color: #047857;
+    border: 2px solid #10b981;
+}
+
+.badge-sisa-cuti-merah {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 2px solid #ef4444;
+}
+
+.sisa-cuti-breakdown-card {
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 11.5px;
+}
+
+.sisa-cuti-breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.breakdown-label {
+    color: #64748b;
+}
+
+.breakdown-val {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.modal-sisa-cuti-footer {
+    padding: 12px 18px;
+    background: #ffffff;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.btn-cek-cuti {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 22px;
+    padding: 0 7px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #0369a1;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.btn-cek-cuti:hover {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    color: #0284c7;
+}
+
+/* TOGGLE MASTER PEGAWAI BUTTON & BADGE */
+.btn-toggle-master {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #1e293b;
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-toggle-master:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+.icon-chevron-master {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.badge-collapse-indicator {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 12px;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.badge-collapse-indicator.badge-open {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
 }

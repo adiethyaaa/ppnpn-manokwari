@@ -117,6 +117,10 @@
                     <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
                     <span>Data Presensi & Laporan</span>
                 </button>
+                <button type="button" class="nav-tab-btn" data-tab="tab-rekap" aria-selected="false">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
+                    <span>Tabel Rekap Kehadiran</span>
+                </button>
                 <button type="button" class="nav-tab-btn" data-tab="tab-import" aria-selected="false">
                     <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     <span>Impor & Sinkronisasi</span>
@@ -290,7 +294,180 @@
             </div>
 
             <!-- =========================================================
-                 TAB 2: IMPOR & SINKRONISASI DATA (SHIFT & MESIN)
+                 TAB: TABEL REKAP KEHADIRAN (REKAP OTOMATIS & EDIT OPERATOR)
+                 ========================================================= -->
+            <div id="tab-rekap" class="tab-pane">
+                <!-- TOOLBAR FILTER REKAP -->
+                <div class="rekap-toolbar-card">
+                    <div class="rekap-toolbar-left">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="selectPeriodeRekap" style="font-size: 12px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                Sumber Data Final:
+                            </label>
+                            <select id="selectPeriodeRekap" onchange="muatRekapKehadiranDariPilihan()" style="padding: 4px 10px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 4px; background: #ffffff; color: var(--text-primary); font-weight: 600; min-width: 250px;">
+                                <option value="" disabled selected>Memuat data final...</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-ghost" onclick="segarkanRekapKehadiran()" style="height: 30px; font-size: 11.5px; border: 1px solid var(--border-color);" title="Hitung Ulang Rekap Kehadiran dari Sumber Final">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            Hitung Rekap Final
+                        </button>
+                    </div>
+                    <div class="rekap-toolbar-right">
+                        <span id="badgeSumberDataRekap" style="font-size: 11.5px; color: var(--text-secondary); background: #f1f5f9; padding: 4px 10px; border-radius: 999px; border: 1px solid #e2e8f0; font-weight: 600;">
+                            Sumber: Cloud Final Database
+                        </span>
+                        <button type="button" class="btn btn-excel" onclick="exportRekapExcel()" style="height: 30px; font-size: 11.5px;">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+                            Unduh Excel Rekap
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STATISTIK RINGKASAN REKAP (5 KARTU STATUS) -->
+                <div class="rekap-stats-grid">
+                    <div class="rekap-stat-card">
+                        <span class="rekap-stat-label">Total Pegawai</span>
+                        <span class="rekap-stat-val" id="statRekapTotalPegawai">0</span>
+                    </div>
+                    <div class="rekap-stat-card">
+                        <span class="rekap-stat-label" style="color: #b91c1c;">Tanpa Keterangan (TK)</span>
+                        <span class="rekap-stat-val" id="statRekapTotalTK" style="color: #b91c1c;">0</span>
+                    </div>
+                    <div class="rekap-stat-card">
+                        <span class="rekap-stat-label" style="color: #4338ca;">Cuti Tahunan (CT)</span>
+                        <span class="rekap-stat-val" id="statRekapTotalCT" style="color: #4338ca;">0</span>
+                    </div>
+                    <div class="rekap-stat-card">
+                        <span class="rekap-stat-label" style="color: #b45309;">Cuti Sakit (CS)</span>
+                        <span class="rekap-stat-val" id="statRekapTotalCS" style="color: #b45309;">0</span>
+                    </div>
+                    <div class="rekap-stat-card">
+                        <span class="rekap-stat-label" style="color: #0369a1;">Dinas Luar (DL)</span>
+                        <span class="rekap-stat-val" id="statRekapTotalDL" style="color: #0369a1;">0</span>
+                    </div>
+                </div>
+
+                 <!-- TABEL REKAP KEHADIRAN -->
+                 <div class="table-card">
+                     <div class="table-wrapper">
+                         <table id="tabelRekapKehadiran" style="width: 100%;">
+                             <thead>
+                                 <tr>
+                                     <th style="width: 36px; text-align: center;">No</th>
+                                     <th style="width: 75px; text-align: center;">ID Pegawai</th>
+                                     <th style="text-align: left; min-width: 200px;">Nama Lengkap Pegawai dan PPNPN</th>
+                                     <th style="width: 75px; text-align: center;">Kategori</th>
+                                     <th style="width: 70px; text-align: center;" title="Hari Kerja Terjadwal">Hari Kerja</th>
+                                     <th style="width: 55px; text-align: center;" title="Hadir Normal / Tepat">HN</th>
+                                     <th style="width: 55px; text-align: center;" title="Terlambat Masuk">TM</th>
+                                     <th style="width: 55px; text-align: center;" title="Pulang Cepat">PC</th>
+                                     <th style="width: 55px; text-align: center;" title="Cuti Sakit">CS</th>
+                                     <th style="width: 55px; text-align: center;" title="Cuti Tahunan">CT</th>
+                                     <th style="width: 55px; text-align: center;" title="Dinas Luar">DL</th>
+                                     <th style="width: 55px; text-align: center;" title="Tanpa Keterangan">TK</th>
+                                     <th style="width: 65px; text-align: center;" title="Jadwal Libur">Libur</th>
+                                     <th style="width: 75px; text-align: center;">Aksi</th>
+                                 </tr>
+                             </thead>
+                             <tbody id="tbodyRekapKehadiran">
+                                 <tr>
+                                     <td colspan="14" style="text-align: center; padding: 28px; color: var(--text-muted);">
+                                          Pilih sumber data final di atas untuk memuat rekapitulasi kehadiran.
+                                     </td>
+                                 </tr>
+                             </tbody>
+                         </table>
+                     </div>
+                 </div>
+
+                 <!-- =========================================================
+                      PEMISAH TEGAS: SECTION DATABASE MASTER PEGAWAI & PPNPN
+                      ========================================================= -->
+                 <div class="section-divider-bold">
+                     <div class="divider-line-bold"></div>
+                     <div class="divider-tag-bold">
+                         <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                         <span>Database Master Pegawai &amp; PPNPN</span>
+                     </div>
+                     <div class="divider-line-bold"></div>
+                 </div>
+
+                 <!-- CARD DATABASE MASTER PEGAWAI & PPNPN (AUTO-HIDE SECARA DEFAULT) -->
+                 <div class="master-pegawai-card" id="cardDatabasePegawai">
+                     <div class="admin-db-header" onclick="toggleTabelMasterPegawai()" style="cursor: pointer;" title="Klik untuk membuka atau menyembunyikan Tabel Database Pegawai">
+                         <div>
+                             <h3 style="margin: 0; color: var(--text-primary); font-size: 14.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                 <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                                 <span>Database Master Pegawai &amp; PPNPN</span>
+                                 <span class="badge-collapse-indicator" id="badgeCollapseMaster">Tersembunyi</span>
+                             </h3>
+                             <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 2px;">
+                                 Data induk profil pegawai PPNPN Kanreg XIV: identitas, jabatan posisi, masa kontrak kerja, dan nomor SPK.
+                             </div>
+                         </div>
+                         <div class="admin-inject-actions" onclick="event.stopPropagation();">
+                             <button type="button" class="btn btn-toggle-master" id="btnToggleMasterPegawai" onclick="toggleTabelMasterPegawai()">
+                                 <svg class="icon-svg icon-chevron-master" id="iconChevronMaster" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                 <span id="labelToggleMaster">Buka Tabel Pegawai</span>
+                             </button>
+                             <button type="button" class="btn btn-ghost" onclick="bukaModalMasterPegawai()" style="height: 30px; font-size: 11.5px; border: 1px solid var(--border-subtle);">
+                                 <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                 Tambah Pegawai
+                             </button>
+                             <button type="button" class="btn btn-ghost" onclick="muatDatabasePegawai()" style="height: 30px; font-size: 11.5px; border: 1px solid var(--border-subtle);" title="Segarkan Data Master Pegawai">
+                                 <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                                 Segarkan
+                             </button>
+                         </div>
+                     </div>
+
+                     <!-- KONTEN AUTO-HIDE (TABEL AKTIF & TIDAK AKTIF) -->
+                     <div id="collapsibleMasterPegawaiBody" style="display: none; margin-top: 14px;">
+                         <!-- SUB-TAB NAVIGASI: TAB KIRI (AKTIF) & TAB KANAN (TIDAK AKTIF) -->
+                         <div class="subtab-pegawai-container">
+                             <button type="button" class="subtab-pegawai-btn active tab-aktif" id="tabBtnPegawaiAktif" onclick="switchSubtabPegawai('aktif')">
+                                 <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                 <span>Pegawai Status Aktif</span>
+                                 <span class="badge-subtab-count" id="countPegawaiAktif">0</span>
+                             </button>
+                             <button type="button" class="subtab-pegawai-btn" id="tabBtnPegawaiTidakAktif" onclick="switchSubtabPegawai('tidak_aktif')">
+                                 <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                 <span>Pegawai Status Tidak Aktif</span>
+                                 <span class="badge-subtab-count" id="countPegawaiTidakAktif">0</span>
+                             </button>
+                         </div>
+
+                         <!-- TABEL MASTER DATABASE PEGAWAI (FONT KECIL & COMPACT) -->
+                         <div class="db-pegawai-table-wrapper db-pegawai-table-compact">
+                             <table style="width: 100%; border-collapse: collapse;">
+                                 <thead>
+                                     <tr>
+                                         <th style="width: 32px; text-align: center;">No</th>
+                                         <th style="width: 65px; text-align: center;">ID</th>
+                                         <th style="width: 80px; text-align: center;">Status</th>
+                                         <th style="text-align: left; padding-left: 8px; min-width: 140px;">Nama Lengkap PPNPN</th>
+                                         <th style="width: 78px; text-align: center;">Tgl Lahir</th>
+                                         <th style="width: 105px; text-align: left;">Jabatan</th>
+                                         <th style="width: 75px; text-align: center;">Job Set</th>
+                                         <th style="width: 130px; text-align: left; padding-left: 6px;">Masa Kontrak</th>
+                                         <th style="width: 125px; text-align: left;">No Kontrak</th>
+                                         <th style="width: 90px; text-align: right; padding-right: 8px;">Nominal</th>
+                                         <th style="width: 80px; text-align: center;">Aksi</th>
+                                     </tr>
+                                 </thead>
+                                 <tbody id="tbodyDatabasePegawai">
+                                     <tr><td colspan="11" style="text-align:center; padding: 20px; color: var(--text-muted);"><span class="spinner-login"></span> Memuat Database Pegawai...</td></tr>
+                                 </tbody>
+                             </table>
+                         </div>
+                     </div>
+                 </div>
+            </div>
+
+            <!-- =========================================================
+                 TAB 3: IMPOR & SINKRONISASI DATA (SHIFT & MESIN)
                  ========================================================= -->
             <div id="tab-import" class="tab-pane">
                 
@@ -845,6 +1022,347 @@
     </div>
   </div>
 </div>
+
+    <!-- MODAL EDIT REKAP PEGAWAI (OPERATOR) -->
+    <div id="modalEditRekapPegawai" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px); z-index: 10000; justify-content: center; align-items: center;">
+        <div class="modal-content" style="max-width: 500px; width: 92%; padding: 22px; border-radius: var(--radius-md); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                <div>
+                    <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: var(--text-primary);" id="modalRekapNamaTitle">Edit Rekap Presensi Pegawai</h3>
+                    <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 2px;" id="modalRekapSubTitle">Perbarui jumlah kehadiran dan izin pegawai</div>
+                </div>
+                <button type="button" class="btn-ghost" onclick="tutupModalEditRekap()" style="border:none; cursor:pointer; font-size: 18px; color: var(--text-muted);">&times;</button>
+            </div>
+
+            <input type="hidden" id="editRekapPegawaiId">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+                <div>
+                    <label style="font-size: 11px; font-weight: 700; color: #15803d; display: block; margin-bottom: 3px;">Hadir Normal (HN):</label>
+                    <input type="number" id="editRekapHN" min="0" max="31" class="admin-input" style="height: 30px; font-size: 12px; width: 100%;">
+                </div>
+                <div>
+                    <label style="font-size: 11px; font-weight: 700; color: #b45309; display: block; margin-bottom: 3px;">Terlambat Masuk (TM):</label>
+                    <input type="number" id="editRekapTM" min="0" max="31" class="admin-input" style="height: 30px; font-size: 12px; width: 100%;">
+                </div>
+                <div>
+                    <label style="font-size: 11px; font-weight: 700; color: #b45309; display: block; margin-bottom: 3px;">Pulang Cepat (PC):</label>
+                    <input type="number" id="editRekapPC" min="0" max="31" class="admin-input" style="height: 30px; font-size: 12px; width: 100%;">
+                </div>
+                <div>
+                    <label style="font-size: 11px; font-weight: 700; color: #b91c1c; display: block; margin-bottom: 3px;">Tanpa Keterangan (TK):</label>
+                    <input type="number" id="editRekapTK" min="0" max="31" class="admin-input" style="height: 30px; font-size: 12px; width: 100%;">
+                </div>
+                <div>
+                    <label style="font-size: 11px; font-weight: 700; color: #b45309; display: block; margin-bottom: 3px;">Cuti Sakit (CS):</label>
+                    <input type="number" id="editRekapCS" min="0" max="31" class="admin-input" style="height: 30px; font-size: 12px; width: 100%;">
+                </div>
+                <div>
+                    <label style="font-size: 11px; font-weight: 700; color: #4338ca; display: block; margin-bottom: 3px;">Cuti Tahunan (CT):</label>
+                    <input type="number" id="editRekapCT" min="0" max="31" class="admin-input" style="height: 30px; font-size: 12px; width: 100%;">
+                </div>
+                <div>
+                    <label style="font-size: 11px; font-weight: 700; color: #0369a1; display: block; margin-bottom: 3px;">Dinas Luar (DL):</label>
+                    <input type="number" id="editRekapDL" min="0" max="31" class="admin-input" style="height: 30px; font-size: 12px; width: 100%;">
+                </div>
+                <div>
+                    <label style="font-size: 11px; font-weight: 700; color: #475569; display: block; margin-bottom: 3px;">Jadwal Libur (LJ):</label>
+                    <input type="number" id="editRekapLJ" min="0" max="31" class="admin-input" style="height: 30px; font-size: 12px; width: 100%;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="font-size: 11px; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 3px;">Catatan / Keterangan Operator:</label>
+                <input type="text" id="editRekapKet" placeholder="Contoh: Surat sakit terlampir / Izin pimpinan" class="admin-input" style="height: 30px; font-size: 12px; width: 100%;">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+                <button type="button" class="btn btn-ghost" onclick="tutupModalEditRekap()" style="border: 1px solid var(--border-color); height: 32px; font-size: 12px;">Batal</button>
+                <button type="button" class="btn btn-excel" onclick="simpanEditRekapPegawai()" style="height: 32px; font-size: 12px;">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Simpan Perubahan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         MODAL POPUP: CEK SISA CUTI TAHUNAN (ALERT INFORMASI)
+         ========================================================= -->
+    <div class="modal-backdrop" id="modalSisaCuti" style="display: none; z-index: 10000;">
+        <div class="modal-content modal-sisa-cuti-dialog">
+            <div class="modal-sisa-cuti-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="modal-sisa-cuti-icon-badge">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: var(--text-primary);">Informasi Hak &amp; Sisa Cuti Tahunan</h3>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">Kantor Regional XIV BKN Manokwari</div>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="tutupModalSisaCuti()" title="Tutup Modal">&times;</button>
+            </div>
+
+            <div class="modal-sisa-cuti-body">
+                <div class="sisa-cuti-hero-card">
+                    <div class="sisa-cuti-hero-label">
+                        sisa cuti tahunan <span id="sisaCutiNamaPegawai" class="sisa-cuti-nama-highlight">Nama Pegawai</span>:
+                    </div>
+                    <div id="sisaCutiBadgeContainer" style="margin-top: 10px;">
+                        <!-- Badge 5 hari (hijau) atau HABIS (merah) -->
+                    </div>
+                </div>
+
+                <div class="sisa-cuti-breakdown-card">
+                    <div class="sisa-cuti-breakdown-row">
+                        <span class="breakdown-label">ID Pegawai / NIK:</span>
+                        <span class="breakdown-val" id="sisaCutiIdPegawai" style="font-family: monospace; font-weight: 700;">-</span>
+                    </div>
+                    <div class="sisa-cuti-breakdown-row">
+                        <span class="breakdown-label">Tahun Periode:</span>
+                        <span class="breakdown-val" id="sisaCutiTahun">2026</span>
+                    </div>
+                    <div class="sisa-cuti-breakdown-row">
+                        <span class="breakdown-label">Hak Kuota Cuti Tahunan:</span>
+                        <span class="breakdown-val">12 Hari / Tahun</span>
+                    </div>
+                    <div class="sisa-cuti-breakdown-row">
+                        <span class="breakdown-label">Total Cuti Terpakai (Tahun Ini):</span>
+                        <span class="breakdown-val" id="sisaCutiTerpakai" style="font-weight: 700; color: #b45309;">0 Hari</span>
+                    </div>
+                    <div class="sisa-cuti-breakdown-row" style="border-top: 1px dashed var(--border-subtle); padding-top: 6px; margin-top: 4px;">
+                        <span class="breakdown-label" style="font-weight: 700; color: var(--text-primary);">Sisa Hak Cuti Tersedia:</span>
+                        <span class="breakdown-val" id="sisaCutiTersediaText" style="font-weight: 700;">-</span>
+                    </div>
+                </div>
+
+                <div id="sisaCutiRincianBulanBox" style="display: none; background: #ffffff; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px 12px; font-size: 11px;">
+                    <div style="font-weight: 700; color: #334155; margin-bottom: 6px;">Rincian Pengambilan Cuti Tahunan:</div>
+                    <div id="sisaCutiRincianList" style="display: flex; flex-direction: column; gap: 3px; color: #475569;"></div>
+                </div>
+            </div>
+
+            <div class="modal-sisa-cuti-footer">
+                <button type="button" class="btn btn-ghost" onclick="tutupModalSisaCuti()" style="width: 100%; height: 34px; font-size: 12px; font-weight: 600; border: 1px solid var(--border-color);">
+                    Tutup Informasi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         MODAL POPUP: TAMBAH & EDIT PEGAWAI MASTER
+         ========================================================= -->
+    <!-- =========================================================
+         MODAL POPUP: TAMBAH & EDIT PEGAWAI MASTER (REDESIGNED)
+         ========================================================= -->
+    <div class="modal-backdrop" id="modalMasterPegawai" style="display: none;">
+        <div class="modal-master-dialog">
+            <!-- HEADER MODAL -->
+            <div class="modal-master-header">
+                <div class="modal-master-header-left">
+                    <div class="modal-master-icon-badge" id="modalMasterIconBadge">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="modal-master-title" id="formMasterTitle">
+                            <span class="badge-mode-master badge-mode-tambah">Tambah Baru</span>
+                            <span>Tambah Pegawai ke Database Master</span>
+                        </h3>
+                        <div class="modal-master-subtitle">
+                            Entri &amp; konfigurasi data induk kepegawaian PPNPN / ASN Kantor Regional XIV BKN.
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="tutupModalMasterPegawai()" title="Tutup Modal (Esc)">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <!-- BODY SCROLLABLE MODAL -->
+            <div class="modal-master-body">
+                
+                <!-- BAGIAN 1: PROFIL & IDENTITAS -->
+                <div class="modal-section-card">
+                    <div class="modal-section-header">
+                        <div class="modal-section-icon">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <div>
+                            <div class="modal-section-title">1. Profil &amp; Identitas Kepegawaian</div>
+                            <div class="modal-section-desc">Identitas dasar pegawai, nomor induk, serta status kepegawaian aktif</div>
+                        </div>
+                    </div>
+                    <div class="modal-section-grid">
+                        <div class="form-group-custom">
+                            <label class="modal-label" for="masterId">
+                                <span>ID Pegawai / NIK PPNPN</span>
+                                <span class="required-star">*</span>
+                            </label>
+                            <input type="text" id="masterId" class="modal-input" placeholder="Cth: 140008" autocomplete="off">
+                            <span class="input-micro-hint">ID unik pegawai di database master (terkunci otomatis saat edit).</span>
+                        </div>
+                        <div class="form-group-custom">
+                            <label class="modal-label" for="masterStatus">
+                                <span>Status Kepegawaian</span>
+                                <span class="required-star">*</span>
+                            </label>
+                            <select id="masterStatus" class="modal-select">
+                                <option value="Aktif">🟢 Aktif</option>
+                                <option value="Tidak Aktif">⚪ Tidak Aktif</option>
+                            </select>
+                            <span class="input-micro-hint">Pegawai aktif akan otomatis muncul pada tabel rekapitulasi utama.</span>
+                        </div>
+                        <div class="form-group-custom full-span">
+                            <label class="modal-label" for="masterNama">
+                                <span>Nama Lengkap PPNPN / Pegawai</span>
+                                <span class="required-star">*</span>
+                            </label>
+                            <input type="text" id="masterNama" class="modal-input" placeholder="Nama lengkap sesuai berkas kontrak / KTP">
+                        </div>
+                        <div class="form-group-custom">
+                            <label class="modal-label" for="masterTglLahir">
+                                <span>Tanggal Lahir</span>
+                            </label>
+                            <input type="date" id="masterTglLahir" class="modal-input date-input-flexible">
+                            <span class="input-micro-hint">Pilih kalender atau ketik langsung (YYYY-MM-DD).</span>
+                        </div>
+                        <div class="form-group-custom">
+                            <label class="modal-label" for="masterAlamat">
+                                <span>Alamat Domisili</span>
+                            </label>
+                            <input type="text" id="masterAlamat" class="modal-input" placeholder="Cth: Arfai, Manokwari">
+                            <span class="input-micro-hint">Wilayah tempat tinggal domisili saat ini.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BAGIAN 2: JABATAN POSISI & ATURAN SHIFT (JOB SET) -->
+                <div class="modal-section-card">
+                    <div class="modal-section-header">
+                        <div class="modal-section-icon">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        </div>
+                        <div>
+                            <div class="modal-section-title">2. Penugasan, Aturan Shift &amp; Standar Gaji</div>
+                            <div class="modal-section-desc">Konfigurasi jabatan posisi serta otomatisasi job set jam kerja &amp; honor</div>
+                        </div>
+                    </div>
+                    <div class="modal-section-grid">
+                        <div class="form-group-custom">
+                            <label class="modal-label" for="masterJabatanPosisi">
+                                <span>Jabatan Posisi</span>
+                                <span class="required-star">*</span>
+                            </label>
+                            <select id="masterJabatanPosisi" class="modal-select" onchange="onJabatanPosisiChange()">
+                                <option value="Tenaga Keamanan">Tenaga Keamanan</option>
+                                <option value="Tenaga Kebersihan">Tenaga Kebersihan</option>
+                                <option value="Tenaga Pengemudi">Tenaga Pengemudi</option>
+                                <option value="Tenaga Pramubakti">Tenaga Pramubakti</option>
+                                <option value="ASN PPPK">ASN PPPK</option>
+                            </select>
+                            <span class="input-micro-hint">Memilih jabatan menyesuaikan default Job Set otomatis.</span>
+                        </div>
+                        <div class="form-group-custom">
+                            <label class="modal-label" for="masterJobSet">
+                                <span>Job Set (Aturan Shift &amp; Gaji)</span>
+                                <span class="required-star">*</span>
+                            </label>
+                            <select id="masterJobSet" class="modal-select" onchange="onJobSetChange()">
+                                <option value="Satpam">Satpam (Default Rp. 3.600.000)</option>
+                                <option value="Staff - 1">Staff - 1 (Default Rp. 3.600.000)</option>
+                                <option value="Staff - 2">Staff - 2 (Default Rp. 3.400.000)</option>
+                            </select>
+                            <span class="input-micro-hint">Menentukan skema jam kerja dan standar honorarium.</span>
+                        </div>
+
+                        <!-- INFO ATURAN SHIFT & GAJI STANDAR -->
+                        <div class="jobset-banner-card full-span" id="boxInfoJobSet">
+                            <div class="jobset-banner-icon">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            </div>
+                            <div class="jobset-banner-content">
+                                <div class="jobset-banner-title" id="infoJobSetJudul">Shift Satpam (24 Jam Berputar)</div>
+                                <div class="jobset-banner-desc" id="infoJobSetDesc">Aturan jam kerja rotasi shift (Pagi/Siang/Malam/Libur). Standar honor: Rp. 3.600.000</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BAGIAN 3: KONTRAK KERJA & REMUNERASI -->
+                <div class="modal-section-card">
+                    <div class="modal-section-header">
+                        <div class="modal-section-icon">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        </div>
+                        <div>
+                            <div class="modal-section-title">3. Masa Perjanjian Kerja &amp; Remunerasi</div>
+                            <div class="modal-section-desc">Masa berlaku SPK, nomor dokumen kontrak, besaran honor bulanan, dan unit kerja</div>
+                        </div>
+                    </div>
+                    <div class="modal-section-grid">
+                        <div class="form-group-custom">
+                            <label class="modal-label" for="masterKontrakMulai">
+                                <span>Kontrak Mulai (TMT)</span>
+                            </label>
+                            <input type="date" id="masterKontrakMulai" class="modal-input date-input-flexible">
+                            <span class="input-micro-hint">Pilih kalender atau ketik (YYYY-MM-DD).</span>
+                        </div>
+                        <div class="form-group-custom">
+                            <label class="modal-label" for="masterKontrakBerakhir">
+                                <span>Kontrak Berakhir</span>
+                            </label>
+                            <input type="date" id="masterKontrakBerakhir" class="modal-input date-input-flexible">
+                            <span class="input-micro-hint">Pilih kalender atau ketik (YYYY-MM-DD).</span>
+                        </div>
+                        <div class="form-group-custom">
+                            <label class="modal-label" for="masterKontrak">
+                                <span>Nomor Kontrak (SPK)</span>
+                            </label>
+                            <input type="text" id="masterKontrak" class="modal-input" placeholder="Cth: 01.E/RT.04/I/2026 atau Rahasia">
+                            <span class="input-micro-hint">Nomor registrasi surat perjanjian kerja resmi.</span>
+                        </div>
+                        <div class="form-group-custom">
+                            <label class="modal-label" for="masterNominal">
+                                <span>Besaran Honor / Gaji</span>
+                            </label>
+                            <input type="text" id="masterNominal" class="modal-input" placeholder="Rp. 3.600.000" style="font-weight: 600; font-family: monospace;">
+                            <span class="input-micro-hint">Nominal honorarium bruto per bulan.</span>
+                        </div>
+                        <div class="form-group-custom full-span">
+                            <label class="modal-label" for="masterUnitKerja">
+                                <span>Unit Kerja Penempatan</span>
+                            </label>
+                            <select id="masterUnitKerja" class="modal-select">
+                                <option value="Kanreg XIV">Kantor Regional XIV BKN Manokwari</option>
+                                <option value="UPT Sorong">UPT BKN Sorong</option>
+                            </select>
+                            <span class="input-micro-hint">Lokasi penempatan satuan kerja pegawai.</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- FOOTER MODAL -->
+            <div class="modal-master-footer">
+                <div class="modal-footer-info">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>Data tersinkronisasi langsung ke Cloud Database Master.</span>
+                </div>
+                <div class="modal-footer-actions">
+                    <button type="button" class="btn btn-modal-cancel" onclick="tutupModalMasterPegawai()">
+                        Batal
+                    </button>
+                    <button type="button" class="btn btn-modal-save" onclick="simpanMasterPegawai()">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Simpan ke Database Master
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modul Scripts Aplikasi -->
     <script src="js/history.js"></script>

@@ -64,6 +64,9 @@ function switchTab(tabId) {
     // 5. Jika kembali ke tab presensi, pastikan viewport virtual scroll terhitung akurat
     if (tabId === 'tab-presensi' && typeof renderVirtualWindow === 'function') {
         renderVirtualWindow(true);
+    } else if (tabId === 'tab-rekap') {
+        if (typeof segarkanRekapKehadiran === 'function') segarkanRekapKehadiran();
+        if (typeof muatDatabasePegawai === 'function') muatDatabasePegawai();
     }
 }
 
@@ -654,67 +657,22 @@ function onShiftChangeInEdit(selectElem) {
 // 3. FUNGSI EDIT BARIS TABEL (COMPACT & MODERN UX)
 function editBaris(btn, key) {
     activeEditingKey = key;
-    let tr = btn.closest("tr");
-    tr.classList.add("sedang-diedit");
-    tr.setAttribute("data-key", key); // Simpan key di elemen TR
-    
-    // Tampilkan floating edit toolbar
     tandaiAdaPerubahanTabel();
-
-    let tdShift = tr.cells[3];
-    let tdKehadiran = tr.cells[6];
-    let tdMasuk = tr.cells[7];
-    let tdPulang = tr.cells[8];
-    
-    let curShift = tdShift.innerText.trim();
-    let curStatus = tdKehadiran.innerText.trim();
-    let curMasuk = tdMasuk.innerText !== "--" ? tdMasuk.innerText : "";
-    let curPulang = tdPulang.innerText !== "--" ? tdPulang.innerText : "";
-    
-    tdShift.innerHTML = `
-        <select class="edit-shift" onchange="onShiftChangeInEdit(this)" style="font-size: 11px; padding: 2px 4px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px;">
-            <option value="P" ${curShift === 'P' ? 'selected' : ''}>P</option>
-            <option value="M" ${curShift === 'M' ? 'selected' : ''}>M</option>
-            <option value="OFF" ${curShift === 'OFF' ? 'selected' : ''}>OFF</option>
-        </select>
-    `;
-
-    let isCustomStatus = ['CT','DL','CS','Cuti','Dinas Luar','Sakit'].includes(curStatus);
-    let selectedValue = isCustomStatus ? (curStatus.includes('CT') || curStatus === 'Cuti' ? 'CT' : (curStatus.includes('DL') || curStatus === 'Dinas Luar' ? 'DL' : 'CS')) : "";
-
-    tdKehadiran.innerHTML = `
-        <select class="edit-kehadiran" style="font-size: 11px; padding: 2px 4px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px;">
-            <option value="" ${selectedValue === '' ? 'selected' : ''}>-- Otomatis --</option>
-            <option value="TK" ${curStatus === 'TK' ? 'selected' : ''}>TK</option>
-            <option value="CT" ${selectedValue === 'CT' ? 'selected' : ''}>Cuti</option>
-            <option value="DL" ${selectedValue === 'DL' ? 'selected' : ''}>Dinas Luar</option>
-            <option value="CS" ${selectedValue === 'CS' ? 'selected' : ''}>Sakit</option>
-        </select>
-    `;
-
-    tdMasuk.innerHTML = `<input type="time" class="edit-input" value="${curMasuk}" style="font-size: 11px; padding: 1px 3px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px; width: 100%; box-sizing: border-box;">`;
-    tdPulang.innerHTML = `<input type="time" class="edit-input" value="${curPulang}" style="font-size: 11px; padding: 1px 3px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px; width: 100%; box-sizing: border-box;">`;
-    
-    let tdAksi = tr.cells[11];
-    tdAksi.innerHTML = ` 
-        <div class="table-actions-cell">
-            <button class="btn-tbl-action btn-tbl-save" onclick="simpanBarisSingle(this, '${key}')" title="Simpan perubahan baris ini">
-                <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                Simpan
-            </button>
-            <button class="btn-tbl-action btn-tbl-cancel" onclick="batalEditBarisSingle(this, '${key}')" title="Batal edit baris ini">
-                <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                Batal
-            </button>
-        </div>
-    `;
+    if (typeof renderVirtualWindow === "function") {
+        renderVirtualWindow(true);
+    } else {
+        renderTabel();
+    }
+    cekTombolSimpanSemua();
 }
 
 function batalEditBarisSingle(btn, key) {
     activeEditingKey = null;
-    let tr = btn.closest("tr");
-    if (tr) tr.classList.remove("sedang-diedit");
-    renderTabel();
+    if (typeof renderVirtualWindow === "function") {
+        renderVirtualWindow(true);
+    } else {
+        renderTabel();
+    }
     cekTombolSimpanSemua();
 }
 
@@ -1265,6 +1223,10 @@ function renderVirtualWindow(force = false) {
 }
 
 function buatHtmlBarisTabel(item, i) {
+    let totalWaktuDisplay = (item.totalText === "--" || !item.totalText) 
+        ? '<span class="badge-no-record">No record</span>' 
+        : item.totalText;
+
     if (item.key === activeEditingKey) {
         let curShift = item.shiftTipe || "OFF";
         let curStatus = item.statusKehadiran || "";
@@ -1298,7 +1260,7 @@ function buatHtmlBarisTabel(item, i) {
                 </td>
                 <td><input type="time" class="edit-input" value="${curMasuk}" style="font-size: 11px; padding: 1px 3px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px; width: 100%; box-sizing: border-box;"></td>
                 <td><input type="time" class="edit-input" value="${curPulang}" style="font-size: 11px; padding: 1px 3px; height: 24px; border: 1px solid var(--border-subtle); border-radius: 4px; width: 100%; box-sizing: border-box;"></td>
-                <td class="${item.totalColor}">${item.totalText}</td>
+                <td class="${item.totalColor}">${totalWaktuDisplay}</td>
                 <td class="${item.kelebihanColor}">${item.kelebihanText}</td>
                 <td>
                     <div class="table-actions-cell">
@@ -1316,6 +1278,11 @@ function buatHtmlBarisTabel(item, i) {
         `;
     }
 
+    let isLibur = (item.statusKehadiran === "LJ" || item.shiftTipe === "OFF");
+    let jamCells = isLibur 
+        ? `<td colspan="2" style="text-align: center;"><span class="badge-jadwal-libur">Jadwal Libur</span></td>`
+        : `<td>${item.jMasuk}</td><td>${item.jPulang}</td>`;
+
     return `
         <tr class="${item.trClass || ''}" data-key="${item.key}">
             <td class="nomor-urut">${i + 1}</td>
@@ -1325,9 +1292,8 @@ function buatHtmlBarisTabel(item, i) {
             <td>${item.hariStr}</td>
             <td>${item.tanggalStr}</td>
             <td><span class="status-badge ${item.badgeClass}">${item.statusKehadiran}</span></td>
-            <td>${item.jMasuk}</td>
-            <td>${item.jPulang}</td>
-            <td class="${item.totalColor}">${item.totalText}</td>
+            ${jamCells}
+            <td class="${item.totalColor}">${totalWaktuDisplay}</td>
             <td class="${item.kelebihanColor}">${item.kelebihanText}</td>
             <td>
                 <div class="table-actions-cell">
@@ -2751,6 +2717,9 @@ window.addEventListener('click', (e) => {
         else if (id === 'modalFinalHistory' && typeof tutupModalFinalHistory === 'function') tutupModalFinalHistory();
         else if (id === 'modalPilihKategori' && typeof tutupModalKategoriPdf === 'function') tutupModalKategoriPdf();
         else if (id === 'modalHapusHistory' && typeof tutupModalHapusHistory === 'function') tutupModalHapusHistory();
+        else if (id === 'modalEditRekapPegawai' && typeof tutupModalEditRekap === 'function') tutupModalEditRekap();
+        else if (id === 'modalMasterPegawai' && typeof tutupModalMasterPegawai === 'function') tutupModalMasterPegawai();
+        else if (id === 'modalSisaCuti' && typeof tutupModalSisaCuti === 'function') tutupModalSisaCuti();
         else {
             e.target.style.display = 'none';
         }
@@ -2780,6 +2749,9 @@ window.addEventListener('keydown', (e) => {
             else if (id === 'modalFinalHistory' && typeof tutupModalFinalHistory === 'function') tutupModalFinalHistory();
             else if (id === 'modalPilihKategori' && typeof tutupModalKategoriPdf === 'function') tutupModalKategoriPdf();
             else if (id === 'modalHapusHistory' && typeof tutupModalHapusHistory === 'function') tutupModalHapusHistory();
+            else if (id === 'modalEditRekapPegawai' && typeof tutupModalEditRekap === 'function') tutupModalEditRekap();
+            else if (id === 'modalMasterPegawai' && typeof tutupModalMasterPegawai === 'function') tutupModalMasterPegawai();
+            else if (id === 'modalSisaCuti' && typeof tutupModalSisaCuti === 'function') tutupModalSisaCuti();
             else openModal.style.display = 'none';
             return;
         }
@@ -2791,3 +2763,1134 @@ window.addEventListener('keydown', (e) => {
         }
     }
 });
+
+// ==========================================================================
+// TAB REKAP KEHADIRAN OTOMATIS & EDIT OPERATOR (HEMAT MEMORI & SYNC CLOUD)
+// ==========================================================================
+window.rekapRowsMaster = [];
+window.cachedFinalHistories = [];
+window.activeRekapPeriodeKey = '';
+
+function segarkanRekapKehadiran() {
+    muatDaftarPeriodeRekap();
+}
+
+function muatDaftarPeriodeRekap() {
+    const selectElem = document.getElementById('selectPeriodeRekap');
+    if (!selectElem) return;
+
+    selectElem.innerHTML = '<option value="" disabled selected>Menghubungkan ke Database Cloud...</option>';
+
+    const database = (typeof db !== "undefined" && db) ? db : (typeof firebase !== "undefined" && firebase.database ? firebase.database() : null);
+
+    if (!database) {
+        selectElem.innerHTML = '<option value="" disabled selected>Koneksi database belum siap</option>';
+        return;
+    }
+
+    database.ref('history').once('value').then(snapshot => {
+        window.cachedFinalHistories = [];
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                const item = child.val();
+                if (item && (item.isFinalReport === true || item.isFinalReport === "true" || (item.reportTitle && item.reportTitle.indexOf("Rekap Final") !== -1))) {
+                    if (!item.id) item.id = child.key;
+                    window.cachedFinalHistories.push(item);
+                }
+            });
+
+            // Urutkan dari yang terbaru (timestamp terbesar / terbaru)
+            window.cachedFinalHistories.sort((a, b) => {
+                let timeA = Number(a.id) || (a.timestamp ? Number(a.timestamp) : 0);
+                let timeB = Number(b.id) || (b.timestamp ? Number(b.timestamp) : 0);
+                return timeB - timeA;
+            });
+        }
+
+        selectElem.innerHTML = '';
+
+        if (window.cachedFinalHistories.length === 0) {
+            const optNone = document.createElement('option');
+            optNone.value = '';
+            optNone.text = '⚠️ Belum ada Laporan Final tersimpan';
+            optNone.disabled = true;
+            optNone.selected = true;
+            selectElem.appendChild(optNone);
+
+            const badgeSumber = document.getElementById('badgeSumberDataRekap');
+            if (badgeSumber) badgeSumber.innerText = 'Sumber: Belum ada data final';
+
+            const tbody = document.getElementById('tbodyRekapKehadiran');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="14" style="text-align: center; padding: 32px 14px; color: var(--text-muted); font-size: 12px;">⚠️ Belum ada data Rekap Final yang tersimpan di Database Cloud.<br><small style="color:var(--text-secondary); margin-top:4px; display:inline-block;">Simpan laporan final terlebih dahulu via tombol <b>"Simpan Rekap Final"</b> pada tab Presensi Harian.</small></td></tr>`;
+            }
+            updateRekapStats(0, 0, 0, 0, 0, 0);
+            return;
+        }
+
+        // Tampilkan semua opsi HANYA dari sumber data final (tanpa tanggal dan tanpa sesi aktif)
+        window.cachedFinalHistories.forEach(item => {
+            let key = item.id;
+            let namaPeriode = item.namaBulanTahun ? item.namaBulanTahun.trim() : (item.reportTitle ? item.reportTitle.replace("Rekap Final Presensi ", "").trim() : "Final");
+            let unitDisplay = item.unitKerja || item.savedByUnitKerja || '';
+            if (unitDisplay) unitDisplay = ` [${unitDisplay}]`;
+
+            const opt = document.createElement('option');
+            opt.value = 'history_' + key;
+            opt.text = `Final: ${namaPeriode}${unitDisplay}`;
+            selectElem.appendChild(opt);
+        });
+
+        // Pilih laporan final yang pertama (terbaru) secara default
+        selectElem.selectedIndex = 0;
+        muatRekapKehadiranDariPilihan();
+    }).catch(err => {
+        console.error("Gagal membaca history final untuk rekap:", err);
+        selectElem.innerHTML = '<option value="" disabled selected>Gagal memuat data final</option>';
+    });
+}
+
+function muatRekapKehadiranDariPilihan() {
+    const selectElem = document.getElementById('selectPeriodeRekap');
+    const badgeSumber = document.getElementById('badgeSumberDataRekap');
+    const selectedVal = selectElem ? selectElem.value : '';
+    window.activeRekapPeriodeKey = selectedVal;
+
+    if (!selectedVal || !selectedVal.startsWith('history_')) {
+        const tbody = document.getElementById('tbodyRekapKehadiran');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="14" style="text-align: center; padding: 32px 14px; color: var(--text-muted); font-size: 12px;">Silakan pilih salah satu Laporan Final dari menu dropdown di atas.</td></tr>`;
+        }
+        updateRekapStats(0, 0, 0, 0, 0, 0);
+        return;
+    }
+
+    let histId = selectedVal.replace('history_', '');
+    let histItem = (window.cachedFinalHistories || []).find(h => h.id === histId);
+    if (!histItem) return;
+
+    let targetDataPegawai = histItem.dataPegawai || {};
+    let targetGlobalRekap = histItem.globalRekap || {};
+    let yr = histItem.activeYear !== undefined ? Number(histItem.activeYear) : new Date().getFullYear();
+    let mo = histItem.activeMonth !== undefined ? Number(histItem.activeMonth) : new Date().getMonth();
+    let periodeStr = histItem.namaBulanTahun || (NAMA_BULAN_ID[mo] ? `${NAMA_BULAN_ID[mo]} ${yr}` : 'Final');
+
+    if (badgeSumber) {
+        badgeSumber.innerText = `Sumber: Laporan Final [${periodeStr}]`;
+    }
+
+    // Kalkulasi rekap dari sumber data final bulan tersebut
+    prosesKalkulasiRekap(targetDataPegawai, targetGlobalRekap, yr, mo, selectedVal);
+}
+
+function prosesKalkulasiRekap(pegawaiMap, rekapMap, yearVal, monthVal, periodeKey) {
+    // Ambil overrides tersimpan jika operator pernah mengedit nilai kehadiran / izin secara manual
+    let overrides = {};
+    try {
+        let saved = sessionStorage.getItem('rekap_override_' + periodeKey);
+        if (saved) overrides = JSON.parse(saved);
+    } catch (e) {
+        console.warn("Error parsing rekap overrides:", e);
+    }
+
+    const employeeIds = Object.keys(pegawaiMap || {}).sort((a, b) => (pegawaiMap[a] || '').localeCompare(pegawaiMap[b] || ''));
+    const daysInMonth = (yearVal !== null && monthVal !== null) ? new Date(yearVal, monthVal + 1, 0).getDate() : 31;
+
+    window.rekapRowsMaster = [];
+
+    employeeIds.forEach((id, index) => {
+        const nama = pegawaiMap[id];
+        let role = "STAFF";
+        let cs = 0, ct = 0, dl = 0, tk = 0, hn = 0, lj = 0;
+        let tm = 0, pc = 0;
+        let hariKerja = 0;
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            let dStr = String(d).padStart(2, '0');
+            let mStr = String(monthVal + 1).padStart(2, '0');
+            let isoDate = `${yearVal}-${mStr}-${dStr}`;
+            let key = id + "_" + isoDate;
+
+            let rec = rekapMap[key];
+            if (!rec) {
+                let dateObj = new Date(yearVal, monthVal, d);
+                let dayOfWeek = dateObj.getDay();
+                if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    lj++;
+                } else {
+                    tk++;
+                    hariKerja++;
+                }
+                continue;
+            }
+
+            if (rec.role) role = rec.role;
+
+            let shift = rec.shiftTipe || "P";
+            if (shift !== "OFF") hariKerja++;
+
+            let st = "TK";
+            if (typeof getStatusKehadiran === "function") {
+                st = getStatusKehadiran(rec);
+            } else {
+                st = (rec.waktuMasuk || rec.waktuPulang) ? "HN" : "TK";
+            }
+
+            if (st === "HN") hn++;
+            else if (st === "CS" || st === "Sakit") cs++;
+            else if (st === "CT" || st === "Cuti") ct++;
+            else if (st === "DL" || st === "Dinas Luar") dl++;
+            else if (st === "LJ" || shift === "OFF") lj++;
+            else if (st.includes("TK")) tk++;
+
+            if (st.includes("TM")) tm++;
+            if (st.includes("PC")) pc++;
+        }
+
+        let totalHadir = hn + tm + pc;
+        let isOverridden = false;
+        let catatan = "";
+
+        // Terapkan override jika operator pernah memodifikasi data rekap
+        if (overrides[id]) {
+            const ov = overrides[id];
+            isOverridden = true;
+            if (ov.hn !== undefined) hn = Number(ov.hn);
+            if (ov.tm !== undefined) tm = Number(ov.tm);
+            if (ov.pc !== undefined) pc = Number(ov.pc);
+            if (ov.cs !== undefined) cs = Number(ov.cs);
+            if (ov.ct !== undefined) ct = Number(ov.ct);
+            if (ov.dl !== undefined) dl = Number(ov.dl);
+            if (ov.tk !== undefined) tk = Number(ov.tk);
+            if (ov.lj !== undefined) lj = Number(ov.lj);
+            if (ov.ket !== undefined) catatan = ov.ket;
+            totalHadir = hn + tm + pc;
+        }
+
+        window.rekapRowsMaster.push({
+            no: index + 1,
+            id: id,
+            nama: nama,
+            role: role,
+            hariKerja: hariKerja,
+            hn: hn,
+            tm: tm,
+            pc: pc,
+            totalHadir: totalHadir,
+            cs: cs,
+            ct: ct,
+            dl: dl,
+            tk: tk,
+            lj: lj,
+            catatan: catatan,
+            isOverridden: isOverridden
+        });
+    });
+
+    renderTabelRekap();
+}
+
+function renderTabelRekap() {
+    const tbody = document.getElementById('tbodyRekapKehadiran');
+    if (!tbody) return;
+
+    if (!window.rekapRowsMaster || window.rekapRowsMaster.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="14" style="text-align: center; padding: 28px 0; color: var(--text-muted); font-size: 12.5px;">Belum ada data rekap presensi pada laporan final ini. Pilih laporan final lain atau perbarui data.</td></tr>`;
+        updateRekapStats(0, 0, 0, 0, 0, 0);
+        return;
+    }
+
+    let totHadirSemua = 0, totTKSemua = 0, totCSSemua = 0, totCTSemua = 0, totDLSemua = 0;
+    let html = '';
+
+    window.rekapRowsMaster.forEach((item, idx) => {
+        totHadirSemua += item.totalHadir;
+        totTKSemua += item.tk;
+        totCSSemua += item.cs;
+        totCTSemua += item.ct;
+        totDLSemua += item.dl;
+
+        let badgeHN = item.hn > 0 ? `<span class="badge-rekap-pill badge-rekap-hn">${item.hn}</span>` : '-';
+        let badgeTM = item.tm > 0 ? `<span class="badge-rekap-pill" style="background:#fffbeb; color:#b45309; border:1px solid #fde68a;">${item.tm}</span>` : '-';
+        let badgePC = item.pc > 0 ? `<span class="badge-rekap-pill" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;">${item.pc}</span>` : '-';
+        let badgeCS = item.cs > 0 ? `<span class="badge-rekap-pill badge-rekap-cs">${item.cs}</span>` : '-';
+        let badgeCT = item.ct > 0 ? `<span class="badge-rekap-pill badge-rekap-ct">${item.ct}</span>` : '-';
+        let badgeDL = item.dl > 0 ? `<span class="badge-rekap-pill badge-rekap-dl">${item.dl}</span>` : '-';
+        let badgeTK = item.tk > 0 ? `<span class="badge-rekap-pill badge-rekap-tk">${item.tk}</span>` : '-';
+        let badgeLJ = item.lj > 0 ? `<span class="badge-rekap-pill" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;">${item.lj}</span>` : '-';
+
+        const safeNama = (item.nama || '').replace(/'/g, "\\'");
+
+        // Tombol cek sisa cuti tahunan digabungkan di sebelah kanan nama pegawai
+        html += `
+            <tr>
+                <td style="text-align: center;">${idx + 1}</td>
+                <td style="text-align: center; font-family: ui-monospace, monospace; font-size: 11px;">${item.id}</td>
+                <td>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <span style="font-weight: 600;">${item.nama}</span>
+                        <button type="button" class="btn-cek-cuti" onclick="cekSisaCutiTahunan('${item.id}', '${safeNama}')" title="Cek sisa cuti tahunan ${item.nama}">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            Cek Sisa Cuti
+                        </button>
+                    </div>
+                </td>
+                <td style="text-align: center;"><span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: #f1f5f9; color: #475569; font-weight: 600;">${item.role}</span></td>
+                <td style="text-align: center; font-weight: 600;">${item.hariKerja}</td>
+                <td style="text-align: center;">${badgeHN}</td>
+                <td style="text-align: center;">${badgeTM}</td>
+                <td style="text-align: center;">${badgePC}</td>
+                <td style="text-align: center;">${badgeCS}</td>
+                <td style="text-align: center;">${badgeCT}</td>
+                <td style="text-align: center;">${badgeDL}</td>
+                <td style="text-align: center;">${badgeTK}</td>
+                <td style="text-align: center;">${badgeLJ}</td>
+                <td style="text-align: center;">
+                    <button type="button" class="btn-tbl-action btn-tbl-edit" onclick="editRekapPegawai('${item.id}')" title="Edit manual angka kehadiran & izin">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Edit
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    updateRekapStats(window.rekapRowsMaster.length, totHadirSemua, totTKSemua, totCSSemua, totCTSemua, totDLSemua);
+}
+
+// ==========================================================================
+// FITUR CEK SISA CUTI TAHUNAN (ALERT / POP UP MODAL)
+// ==========================================================================
+function cekSisaCutiTahunan(id, nama) {
+    const kuotaTahunan = 12; // Standar Hak Cuti Tahunan: 12 hari per tahun kalender
+
+    // Dapatkan tahun periode aktif
+    let targetYear = (typeof activeYear !== 'undefined' && activeYear) ? Number(activeYear) : new Date().getFullYear();
+    const selectedVal = window.activeRekapPeriodeKey || '';
+    if (selectedVal.startsWith('history_')) {
+        let histId = selectedVal.replace('history_', '');
+        let histItem = (window.cachedFinalHistories || []).find(h => h.id === histId);
+        if (histItem && histItem.activeYear) {
+            targetYear = Number(histItem.activeYear);
+        }
+    }
+
+    // Hitung total akumulasi cuti tahunan (CT) yang telah diambil dari seluruh history final tahun tersebut
+    const riwayat = hitungAkumulasiCutiTahunan(id, targetYear);
+    
+    // Periksa apakah di tabel saat ini operator sedang mengedit CT pegawai
+    const rowSaatIni = (window.rekapRowsMaster || []).find(r => r.id === id);
+    let totalCTTerpakai = riwayat.totalCT;
+    if (rowSaatIni && rowSaatIni.ct > 0 && riwayat.totalCT === 0) {
+        totalCTTerpakai = rowSaatIni.ct;
+    }
+
+    const sisa = kuotaTahunan - totalCTTerpakai;
+
+    // Tampilkan di Pop Up Alert Modal Sisa Cuti
+    const modal = document.getElementById('modalSisaCuti');
+    if (!modal) {
+        // Fallback jika elemen modal belum ada di DOM
+        if (sisa <= 0) {
+            alert(`sisa cuti tahunan ${nama}:\nHABIS`);
+        } else {
+            alert(`sisa cuti tahunan ${nama}:\n${sisa} hari`);
+        }
+        return;
+    }
+
+    document.getElementById('sisaCutiNamaPegawai').innerText = nama;
+    document.getElementById('sisaCutiIdPegawai').innerText = id;
+    document.getElementById('sisaCutiTahun').innerText = targetYear;
+    document.getElementById('sisaCutiTerpakai').innerText = `${totalCTTerpakai} Hari`;
+
+    const badgeContainer = document.getElementById('sisaCutiBadgeContainer');
+    const tersediaText = document.getElementById('sisaCutiTersediaText');
+
+    if (sisa <= 0) {
+        badgeContainer.innerHTML = `<span class="badge-sisa-cuti badge-sisa-cuti-merah">HABIS</span>`;
+        if (tersediaText) {
+            tersediaText.innerHTML = `<span style="color: #dc2626; font-weight: 700;">0 Hari (Cuti Tahunan Habis)</span>`;
+        }
+    } else {
+        badgeContainer.innerHTML = `<span class="badge-sisa-cuti badge-sisa-cuti-hijau">${sisa} hari</span>`;
+        if (tersediaText) {
+            tersediaText.innerHTML = `<span style="color: #059669; font-weight: 700;">${sisa} Hari Tersedia</span>`;
+        }
+    }
+
+    // Tampilkan rincian bulan jika ada
+    const rincianBox = document.getElementById('sisaCutiRincianBulanBox');
+    const rincianList = document.getElementById('sisaCutiRincianList');
+    if (rincianBox && rincianList) {
+        if (riwayat.rincian && riwayat.rincian.length > 0) {
+            rincianBox.style.display = 'block';
+            rincianList.innerHTML = riwayat.rincian.map(r => `
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #f1f5f9; padding: 2px 0;">
+                    <span>● Periode ${r.bulan}:</span>
+                    <span style="font-weight: 600; color: #4338ca;">${r.hari} Hari CT</span>
+                </div>
+            `).join('');
+        } else if (totalCTTerpakai > 0) {
+            rincianBox.style.display = 'block';
+            rincianList.innerHTML = `
+                <div style="display: flex; justify-content: space-between; padding: 2px 0;">
+                    <span>● Periode Laporan Final Ini:</span>
+                    <span style="font-weight: 600; color: #4338ca;">${totalCTTerpakai} Hari CT</span>
+                </div>
+            `;
+        } else {
+            rincianBox.style.display = 'none';
+            rincianList.innerHTML = '';
+        }
+    }
+
+    modal.style.display = 'flex';
+}
+
+function tutupModalSisaCuti() {
+    const modal = document.getElementById('modalSisaCuti');
+    if (modal) modal.style.display = 'none';
+}
+
+function hitungAkumulasiCutiTahunan(employeeId, targetYear) {
+    let totalCT = 0;
+    let rincian = [];
+
+    const histories = window.cachedFinalHistories || [];
+    // Kelompokkan per bulan agar deduping versi final
+    const bulanMap = {};
+
+    histories.forEach(h => {
+        let yr = h.activeYear !== undefined ? Number(h.activeYear) : null;
+        let mo = h.activeMonth !== undefined ? Number(h.activeMonth) : null;
+        if (yr === targetYear && mo !== null) {
+            let key = `${yr}_${mo}`;
+            let tVal = Number(h.id) || (h.timestamp ? Number(h.timestamp) : 0);
+            if (!bulanMap[key] || tVal > bulanMap[key].tVal) {
+                bulanMap[key] = { hist: h, tVal: tVal, mo: mo };
+            }
+        }
+    });
+
+    Object.keys(bulanMap).sort((a, b) => bulanMap[a].mo - bulanMap[b].mo).forEach(k => {
+        const item = bulanMap[k];
+        const h = item.hist;
+        const mo = item.mo;
+        const bulanName = NAMA_BULAN_ID[mo] || `Bulan ${mo + 1}`;
+
+        let ctBulan = 0;
+        // Cek overrides
+        let ovKey = 'history_' + h.id;
+        let ov = null;
+        try {
+            let saved = sessionStorage.getItem('rekap_override_' + ovKey);
+            if (saved) ov = JSON.parse(saved);
+        } catch (e) {}
+
+        if (ov && ov[employeeId] && ov[employeeId].ct !== undefined) {
+            ctBulan = Number(ov[employeeId].ct) || 0;
+        } else if (h.globalRekap) {
+            const daysInMonth = new Date(targetYear, mo + 1, 0).getDate();
+            for (let d = 1; d <= daysInMonth; d++) {
+                let dStr = String(d).padStart(2, '0');
+                let mStr = String(mo + 1).padStart(2, '0');
+                let isoDate = `${targetYear}-${mStr}-${dStr}`;
+                let rec = h.globalRekap[employeeId + "_" + isoDate];
+                if (rec) {
+                    let st = (typeof getStatusKehadiran === "function") ? getStatusKehadiran(rec) : (rec.status || "");
+                    if (st === "CT" || st === "Cuti") {
+                        ctBulan++;
+                    }
+                }
+            }
+        }
+
+        if (ctBulan > 0) {
+            totalCT += ctBulan;
+            rincian.push({ bulan: bulanName, hari: ctBulan });
+        }
+    });
+
+    return { totalCT, rincian };
+}
+
+function updateRekapStats(total, hadir, tk, cs, ct, dl) {
+    if (document.getElementById('statRekapTotalPegawai')) document.getElementById('statRekapTotalPegawai').innerText = total;
+    if (document.getElementById('statRekapTotalHadir')) document.getElementById('statRekapTotalHadir').innerText = hadir;
+    if (document.getElementById('statRekapTotalTK')) document.getElementById('statRekapTotalTK').innerText = tk;
+    if (document.getElementById('statRekapTotalCS')) document.getElementById('statRekapTotalCS').innerText = cs;
+    if (document.getElementById('statRekapTotalCT')) document.getElementById('statRekapTotalCT').innerText = ct;
+    if (document.getElementById('statRekapTotalDL')) document.getElementById('statRekapTotalDL').innerText = dl;
+}
+
+function editRekapPegawai(id) {
+    const item = window.rekapRowsMaster.find(r => r.id === id);
+    if (!item) return;
+
+    document.getElementById('editRekapPegawaiId').value = item.id;
+    document.getElementById('modalRekapNamaTitle').innerText = item.nama;
+    document.getElementById('modalRekapSubTitle').innerText = `ID: ${item.id} | Kategori: ${item.role} | Hari Kerja: ${item.hariKerja}`;
+
+    document.getElementById('editRekapHN').value = item.hn;
+    document.getElementById('editRekapTM').value = item.tm;
+    document.getElementById('editRekapPC').value = item.pc;
+    document.getElementById('editRekapTK').value = item.tk;
+    document.getElementById('editRekapCS').value = item.cs;
+    document.getElementById('editRekapCT').value = item.ct;
+    document.getElementById('editRekapDL').value = item.dl;
+    document.getElementById('editRekapLJ').value = item.lj;
+    document.getElementById('editRekapKet').value = item.catatan || '';
+
+    const modal = document.getElementById('modalEditRekapPegawai');
+    if (modal) modal.style.display = 'flex';
+}
+
+function tutupModalEditRekap() {
+    const modal = document.getElementById('modalEditRekapPegawai');
+    if (modal) modal.style.display = 'none';
+}
+
+function simpanEditRekapPegawai() {
+    const id = document.getElementById('editRekapPegawaiId').value;
+    if (!id) return;
+
+    const periodeKey = window.activeRekapPeriodeKey || 'sesi_aktif';
+    let overrides = {};
+    try {
+        let saved = sessionStorage.getItem('rekap_override_' + periodeKey);
+        if (saved) overrides = JSON.parse(saved);
+    } catch (e) {}
+
+    overrides[id] = {
+        hn: parseInt(document.getElementById('editRekapHN').value) || 0,
+        tm: parseInt(document.getElementById('editRekapTM').value) || 0,
+        pc: parseInt(document.getElementById('editRekapPC').value) || 0,
+        tk: parseInt(document.getElementById('editRekapTK').value) || 0,
+        cs: parseInt(document.getElementById('editRekapCS').value) || 0,
+        ct: parseInt(document.getElementById('editRekapCT').value) || 0,
+        dl: parseInt(document.getElementById('editRekapDL').value) || 0,
+        lj: parseInt(document.getElementById('editRekapLJ').value) || 0,
+        ket: document.getElementById('editRekapKet').value.trim()
+    };
+
+    try {
+        sessionStorage.setItem('rekap_override_' + periodeKey, JSON.stringify(overrides));
+    } catch (e) {
+        console.warn("Storage warning:", e);
+    }
+
+    // Sinkronkan ke Firebase jika database aktif
+    const database = (typeof db !== "undefined" && db) ? db : (typeof firebase !== "undefined" && firebase.database ? firebase.database() : null);
+    if (database) {
+        database.ref(`rekapOverrides/${periodeKey}/${id}`).set(overrides[id]).catch(err => {
+            console.warn("Firebase rekap override sync warning:", err);
+        });
+    }
+
+    tutupModalEditRekap();
+    muatRekapKehadiranDariPilihan();
+    alert("Data rekap presensi pegawai berhasil diperbarui.");
+}
+
+function exportRekapExcel() {
+    if (!window.rekapRowsMaster || window.rekapRowsMaster.length === 0) {
+        alert("Belum ada data rekap presensi yang dapat diekspor.");
+        return;
+    }
+
+    if (typeof XLSX === 'undefined') {
+        alert("Pustaka pembuat Excel (SheetJS) belum siap. Silakan muat ulang halaman.");
+        return;
+    }
+
+    let targetYear = (typeof activeYear !== 'undefined' && activeYear) ? Number(activeYear) : new Date().getFullYear();
+    const rowsExcel = window.rekapRowsMaster.map(item => {
+        let riwayat = (typeof hitungAkumulasiCutiTahunan === 'function') ? hitungAkumulasiCutiTahunan(item.id, targetYear) : { totalCT: item.ct };
+        let totalCT = riwayat.totalCT || item.ct || 0;
+        let sisa = 12 - totalCT;
+        return {
+            "No": item.no,
+            "ID Pegawai": item.id,
+            "Nama Pegawai dan PPNPN": item.nama,
+            "Kategori": item.role,
+            "Hari Kerja": item.hariKerja,
+            "Hadir Normal (HN)": item.hn,
+            "Terlambat (TM)": item.tm,
+            "Pulang Cepat (PC)": item.pc,
+            "Cuti Sakit (CS)": item.cs,
+            "Cuti Tahunan (CT)": item.ct,
+            "Dinas Luar (DL)": item.dl,
+            "Tanpa Keterangan (TK)": item.tk,
+            "Libur (LJ)": item.lj,
+            "Sisa Cuti Tahunan": sisa <= 0 ? "HABIS" : `${sisa} Hari`
+        };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rowsExcel);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Rekap Kehadiran");
+
+    let namaPeriode = (typeof namaBulanTahun !== 'undefined' && namaBulanTahun) ? namaBulanTahun.replace(/ /g, "_") : "Bulan_Aktif";
+    XLSX.writeFile(wb, `Rekap_Kehadiran_Bulanan_${namaPeriode}.xlsx`);
+}
+
+// ==========================================================================
+// PENGELOLAAN DATABASE MASTER PEGAWAI & PPNPN (TAB REKAP KEHADIRAN)
+// ==========================================================================
+
+window.activeSubtabPegawai = 'aktif';
+window.cachedListPegawai = [];
+
+// HELPER PARSING & FORMAT TANGGAL FLEKSIBEL (PILIH & KETIK)
+const NAMA_BULAN_ID = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+function parseStringToYMD(str) {
+    if (!str || str === 'Tidak Aktif' || str === 'Tidak aktif' || str === '--' || str === '-') return '';
+    str = String(str).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    
+    // Format DD/MM/YYYY
+    const dmyMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (dmyMatch) {
+        return `${dmyMatch[3]}-${String(dmyMatch[2]).padStart(2, '0')}-${String(dmyMatch[1]).padStart(2, '0')}`;
+    }
+    
+    // Format "01 Januari 2026"
+    const textMatch = str.match(/^(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})$/);
+    if (textMatch) {
+        const d = String(textMatch[1]).padStart(2, '0');
+        const monthName = textMatch[2].toLowerCase();
+        const y = textMatch[3];
+        const monthIndex = NAMA_BULAN_ID.findIndex(b => b.toLowerCase() === monthName);
+        if (monthIndex !== -1) {
+            return `${y}-${String(monthIndex + 1).padStart(2, '0')}-${d}`;
+        }
+    }
+    return '';
+}
+
+function formatYMDToIndo(ymdStr) {
+    if (!ymdStr) return '-';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(ymdStr)) {
+        const parts = ymdStr.split('-');
+        const y = parts[0];
+        const mIdx = parseInt(parts[1], 10) - 1;
+        const d = String(parseInt(parts[2], 10)).padStart(2, '0');
+        if (mIdx >= 0 && mIdx < 12) {
+            return `${d} ${NAMA_BULAN_ID[mIdx]} ${y}`;
+        }
+    }
+    return ymdStr;
+}
+
+function formatYMDToDMY(ymdStr) {
+    if (!ymdStr) return '--';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(ymdStr)) {
+        const parts = ymdStr.split('-');
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return ymdStr;
+}
+
+const NAMA_BULAN_SINGKAT_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+function formatTanggalSingkat3Huruf(str) {
+    if (!str || str === '-' || str === '--') return '-';
+    if (typeof str !== 'string') str = String(str);
+    const trimmed = str.trim();
+    if (trimmed.toLowerCase().includes('tidak')) return 'Tidak Aktif';
+
+    // Cek format YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        const parts = trimmed.split('-');
+        const y = parts[0];
+        const mIdx = parseInt(parts[1], 10) - 1;
+        const d = parseInt(parts[2], 10);
+        if (mIdx >= 0 && mIdx < 12) {
+            return `${d} ${NAMA_BULAN_SINGKAT_ID[mIdx]} ${y}`;
+        }
+    }
+
+    // Cek format DD/MM/YYYY atau DD-MM-YYYY
+    const slashMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (slashMatch) {
+        const d = parseInt(slashMatch[1], 10);
+        const mIdx = parseInt(slashMatch[2], 10) - 1;
+        const y = slashMatch[3];
+        if (mIdx >= 0 && mIdx < 12) {
+            return `${d} ${NAMA_BULAN_SINGKAT_ID[mIdx]} ${y}`;
+        }
+    }
+
+    // Cek format teks "01 Januari 2026" atau "1 Jan 2026"
+    const textMatch = trimmed.match(/^(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})$/);
+    if (textMatch) {
+        const d = parseInt(textMatch[1], 10);
+        const mStr = textMatch[2].toLowerCase();
+        const y = textMatch[3];
+        const mIdx = NAMA_BULAN_ID.findIndex(b => b.toLowerCase().startsWith(mStr.slice(0, 3)) || mStr.startsWith(b.toLowerCase().slice(0, 3)));
+        if (mIdx !== -1) {
+            return `${d} ${NAMA_BULAN_SINGKAT_ID[mIdx]} ${y}`;
+        }
+    }
+
+    return trimmed;
+}
+
+// KONTROL POPUP MODAL MASTER PEGAWAI
+function bukaModalMasterPegawai() {
+    const modal = document.getElementById("modalMasterPegawai");
+    if (!modal) return;
+    resetFormMasterPegawai();
+    modal.style.display = "flex";
+}
+
+function tutupModalMasterPegawai() {
+    const modal = document.getElementById("modalMasterPegawai");
+    if (modal) modal.style.display = "none";
+}
+
+function toggleFormMasterPegawai(forceState = null) {
+    if (forceState === true) {
+        bukaModalMasterPegawai();
+    } else if (forceState === false) {
+        tutupModalMasterPegawai();
+    } else {
+        const modal = document.getElementById("modalMasterPegawai");
+        if (modal && modal.style.display === "flex") {
+            tutupModalMasterPegawai();
+        } else {
+            bukaModalMasterPegawai();
+        }
+    }
+}
+
+// EVENT CHANGE: JABATAN POSISI & JOB SET (ATURAN GAJI & JAM SHIFT)
+function onJabatanPosisiChange() {
+    const jabatan = document.getElementById("masterJabatanPosisi")?.value;
+    const jobSetEl = document.getElementById("masterJobSet");
+    if (!jobSetEl) return;
+
+    if (jabatan === "Tenaga Keamanan") {
+        jobSetEl.value = "Satpam";
+    } else if (jabatan === "Tenaga Kebersihan") {
+        jobSetEl.value = "Staff - 2";
+    } else if (jabatan === "Tenaga Pengemudi" || jabatan === "Tenaga Pramubakti") {
+        jobSetEl.value = "Staff - 1";
+    }
+    onJobSetChange();
+}
+
+function onJobSetChange() {
+    const jobSet = document.getElementById("masterJobSet")?.value;
+    const nominalEl = document.getElementById("masterNominal");
+    const infoJudul = document.getElementById("infoJobSetJudul");
+    const infoDesc = document.getElementById("infoJobSetDesc");
+
+    // Aturan Penentuan Default Gaji & Jam Kerja Shift:
+    // Satpam = Rp. 3.600.000
+    // Staff - 1 = Rp. 3.600.000
+    // Staff - 2 = Rp. 3.400.000
+    if (jobSet === "Satpam") {
+        if (nominalEl) nominalEl.value = "Rp. 3.600.000";
+        if (infoJudul) infoJudul.innerText = "Shift Satpam (24 Jam Rotasi Berputar)";
+        if (infoDesc) infoDesc.innerText = "Aturan jam kerja rotasi shift (Pagi/Siang/Malam/Libur). Standar honor: Rp. 3.600.000";
+    } else if (jobSet === "Staff - 1") {
+        if (nominalEl) nominalEl.value = "Rp. 3.600.000";
+        if (infoJudul) infoJudul.innerText = "Jam Kerja Kantor Standar (Staff - 1 / Pramubakti / Pengemudi)";
+        if (infoDesc) infoDesc.innerText = "Senin s/d Jumat (07:30 - 16:00 WIT). Standar honor: Rp. 3.600.000";
+    } else if (jobSet === "Staff - 2") {
+        if (nominalEl) nominalEl.value = "Rp. 3.400.000";
+        if (infoJudul) infoJudul.innerText = "Jam Kerja Operasional & Kebersihan (Staff - 2)";
+        if (infoDesc) infoDesc.innerText = "Jadwal kerja operasional kantor & kebersihan. Standar honor: Rp. 3.400.000";
+    }
+}
+
+function switchSubtabPegawai(statusTab) {
+    window.activeSubtabPegawai = statusTab;
+    const btnAktif = document.getElementById("tabBtnPegawaiAktif");
+    const btnTidakAktif = document.getElementById("tabBtnPegawaiTidakAktif");
+
+    if (statusTab === 'aktif') {
+        if (btnAktif) { btnAktif.classList.add("active", "tab-aktif"); }
+        if (btnTidakAktif) { btnTidakAktif.classList.remove("active", "tab-tidak-aktif"); }
+    } else {
+        if (btnTidakAktif) { btnTidakAktif.classList.add("active", "tab-tidak-aktif"); }
+        if (btnAktif) { btnAktif.classList.remove("active", "tab-aktif"); }
+    }
+
+    renderTabelDatabasePegawai();
+}
+
+function resetFormMasterPegawai() {
+    const titleEl = document.getElementById("formMasterTitle");
+    if (titleEl) {
+        titleEl.innerHTML = `
+            <span class="badge-mode-master badge-mode-tambah">Tambah Baru</span>
+            <span>Tambah Pegawai ke Database Master</span>
+        `;
+    }
+    const saveBtn = document.querySelector("#modalMasterPegawai .btn-modal-save");
+    if (saveBtn) {
+        saveBtn.innerHTML = `
+            <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Simpan Pegawai Baru
+        `;
+    }
+    const idEl = document.getElementById("masterId");
+    if (idEl) { idEl.value = ""; idEl.readOnly = false; }
+    if (document.getElementById("masterStatus")) document.getElementById("masterStatus").value = "Aktif";
+    if (document.getElementById("masterNama")) document.getElementById("masterNama").value = "";
+    if (document.getElementById("masterTglLahir")) document.getElementById("masterTglLahir").value = "";
+    if (document.getElementById("masterAlamat")) document.getElementById("masterAlamat").value = "";
+    if (document.getElementById("masterJabatanPosisi")) document.getElementById("masterJabatanPosisi").value = "Tenaga Keamanan";
+    if (document.getElementById("masterJobSet")) document.getElementById("masterJobSet").value = "Satpam";
+    if (document.getElementById("masterKontrakMulai")) document.getElementById("masterKontrakMulai").value = "2026-01-01";
+    if (document.getElementById("masterKontrakBerakhir")) document.getElementById("masterKontrakBerakhir").value = "2026-12-31";
+    if (document.getElementById("masterKontrak")) document.getElementById("masterKontrak").value = "";
+    if (document.getElementById("masterNominal")) document.getElementById("masterNominal").value = "Rp. 3.600.000";
+    if (document.getElementById("masterUnitKerja")) document.getElementById("masterUnitKerja").value = "Kanreg XIV";
+    onJobSetChange();
+}
+
+function simpanMasterPegawai() {
+    const user = window.currentUser || (typeof activeUser !== "undefined" ? activeUser : null);
+    const database = (typeof db !== "undefined" && db) ? db : (typeof firebase !== "undefined" && firebase.database ? firebase.database() : null);
+    
+    if (!database) {
+        alert("Koneksi database belum siap. Silakan muat ulang halaman!");
+        return;
+    }
+
+    const id = document.getElementById("masterId")?.value.trim();
+    const status = document.getElementById("masterStatus")?.value || "Aktif";
+    const nama = document.getElementById("masterNama")?.value.trim();
+    const tglLahirRaw = document.getElementById("masterTglLahir")?.value;
+    const alamat = document.getElementById("masterAlamat")?.value.trim() || "--";
+    const jabatanPosisi = document.getElementById("masterJabatanPosisi")?.value || "--";
+    const jobSet = document.getElementById("masterJobSet")?.value || "Staff - 1";
+    const kontrakMulaiRaw = document.getElementById("masterKontrakMulai")?.value;
+    const kontrakBerakhirRaw = document.getElementById("masterKontrakBerakhir")?.value;
+    const nomorKontrak = document.getElementById("masterKontrak")?.value.trim() || "-";
+    const nominal = document.getElementById("masterNominal")?.value.trim() || "Rp. 3.600.000";
+    const unitKerja = document.getElementById("masterUnitKerja")?.value || "Kanreg XIV";
+
+    if (!id || !nama) {
+        alert("Harap lengkapi ID Pegawai dan Nama Lengkap PPNPN!");
+        return;
+    }
+
+    // Format Tanggal untuk Tampilan & Kompatibilitas
+    const tglLahir = tglLahirRaw ? formatYMDToDMY(tglLahirRaw) : "--";
+    const kontrakMulai = (status === 'Tidak Aktif' && !kontrakMulaiRaw) ? "Tidak Aktif" : (kontrakMulaiRaw ? formatYMDToIndo(kontrakMulaiRaw) : "-");
+    const kontrakBerakhir = (status === 'Tidak Aktif' && !kontrakBerakhirRaw) ? "Tidak Aktif" : (kontrakBerakhirRaw ? formatYMDToIndo(kontrakBerakhirRaw) : "-");
+
+    let role = "STAFF";
+    if (jobSet.toLowerCase().includes("satpam")) {
+        role = "SATPAM";
+    } else if (jobSet.toLowerCase().includes("magang")) {
+        role = "MAGANG";
+    }
+
+    const payload = {
+        id: id,
+        status: status,
+        nama: nama,
+        tglLahir: tglLahir,
+        alamat: alamat,
+        jabatanPosisi: jabatanPosisi,
+        jobSet: jobSet,
+        role: role,
+        kontrakMulai: kontrakMulai,
+        kontrakBerakhir: kontrakBerakhir,
+        nomorKontrak: nomorKontrak,
+        nominal: nominal,
+        unitKerja: unitKerja,
+        hadir: 0,
+        tk: 0,
+        cs: 0,
+        ct: 0,
+        dl: 0,
+        updatedAt: new Date().toISOString(),
+        updatedBy: user ? (user.nama || user.username || "Operator") : "User"
+    };
+
+    database.ref('databasePegawai/' + id).set(payload, (err) => {
+        if (err) {
+            alert("Gagal menyimpan pegawai: " + err.message);
+        } else {
+            alert(`✅ Data Pegawai [${id} - ${nama}] berhasil disimpan ke Database Master!`);
+            tutupModalMasterPegawai();
+            muatDatabasePegawai();
+        }
+    });
+}
+
+function muatDatabasePegawai() {
+    const database = (typeof db !== "undefined" && db) ? db : (typeof firebase !== "undefined" && firebase.database ? firebase.database() : null);
+    const tbody = document.getElementById("tbodyDatabasePegawai");
+    if (!tbody) return;
+
+    if (!database) {
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 20px; color: var(--text-muted);"><span class="spinner-login"></span> Menghubungkan ke Database Master...</td></tr>`;
+        setTimeout(muatDatabasePegawai, 600);
+        return;
+    }
+
+    database.ref('databasePegawai').on('value', (snapshot) => {
+        window.cachedListPegawai = [];
+
+        if (!snapshot.exists()) {
+            renderTabelDatabasePegawai();
+            return;
+        }
+
+        snapshot.forEach((child) => {
+            const val = child.val();
+            if (val) {
+                if (!val.id) val.id = child.key;
+                window.cachedListPegawai.push(val);
+            }
+        });
+
+        // Urutkan berdasarkan ID
+        window.cachedListPegawai.sort((a, b) => (a.id || '').localeCompare(b.id || '', undefined, { numeric: true }));
+
+        renderTabelDatabasePegawai();
+    }, (error) => {
+        console.error("Error Firebase Database Pegawai:", error);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 20px; color: #b91c1c;">Gagal memuat database pegawai: ${error.message}</td></tr>`;
+        }
+    });
+}
+
+function renderTabelDatabasePegawai() {
+    const tbody = document.getElementById("tbodyDatabasePegawai");
+    if (!tbody) return;
+
+    const listSemua = window.cachedListPegawai || [];
+    const listAktif = listSemua.filter(p => (p.status || 'Aktif').toLowerCase() === 'aktif');
+    const listTidakAktif = listSemua.filter(p => (p.status || '').toLowerCase().includes('tidak'));
+
+    // Update Counter di Tombol Tab
+    if (document.getElementById("countPegawaiAktif")) document.getElementById("countPegawaiAktif").innerText = listAktif.length;
+    if (document.getElementById("countPegawaiTidakAktif")) document.getElementById("countPegawaiTidakAktif").innerText = listTidakAktif.length;
+
+    // Filter daftar sesuai tab aktif saat ini
+    const isAktifTab = (window.activeSubtabPegawai === 'aktif');
+    const listTampil = isAktifTab ? listAktif : listTidakAktif;
+
+    tbody.innerHTML = "";
+
+    if (listTampil.length === 0) {
+        let pesanKosong = isAktifTab 
+            ? "Belum ada data pegawai dengan status Aktif.<br><small style='font-size:11px; color:var(--text-secondary);'>Gunakan tombol <b>Tambah Pegawai</b> di atas untuk menambahkan data baru.</small>"
+            : "Tidak ada data pegawai dengan status Tidak Aktif.";
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="11" style="text-align:center; padding: 24px 14px; color: var(--text-muted); font-style: italic; font-size: 11px;">
+                    ${pesanKosong}
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    listTampil.forEach((pegawai, idx) => {
+        const tr = document.createElement("tr");
+        const isAktif = (pegawai.status || 'Aktif').toLowerCase() === 'aktif';
+        
+        // Tandai baris data pegawai tidak aktif dengan warna abu-abu
+        if (!isAktif) {
+            tr.classList.add("row-pegawai-tidak-aktif");
+        }
+
+        const badgeStatus = isAktif 
+            ? `<span class="badge-status-aktif">● Aktif</span>`
+            : `<span class="badge-status-tidak-aktif">● Tidak Aktif</span>`;
+
+        // Format Masa Kontrak: 2 Baris Badge Mulai & Akhir dengan Bulan 3 Huruf
+        let htmlMasaKontrak = '';
+        const kmRaw = (pegawai.kontrakMulai || '').trim();
+        const kbRaw = (pegawai.kontrakBerakhir || '').trim();
+        const isNonAktifKontrak = kmRaw.toLowerCase().includes('tidak') || kbRaw.toLowerCase().includes('tidak');
+
+        if (isNonAktifKontrak && !kmRaw.includes('20') && !kbRaw.includes('20')) {
+            htmlMasaKontrak = `<span class="badge-kontrak-nonaktif">Tidak Aktif</span>`;
+        } else if (kmRaw || kbRaw) {
+            const tglMulai = formatTanggalSingkat3Huruf(kmRaw);
+            const tglAkhir = formatTanggalSingkat3Huruf(kbRaw);
+            htmlMasaKontrak = `
+                <div class="kontrak-cell-box">
+                    <div class="kontrak-row">
+                        <span class="badge-kontrak-tag badge-kontrak-mulai">Mulai</span>
+                        <span class="kontrak-tgl">${tglMulai}</span>
+                    </div>
+                    <div class="kontrak-row">
+                        <span class="badge-kontrak-tag badge-kontrak-akhir">Akhir</span>
+                        <span class="kontrak-tgl">${tglAkhir}</span>
+                    </div>
+                </div>
+            `;
+        } else {
+            htmlMasaKontrak = `<span style="color: #94a3b8; font-size: 10.5px;">-</span>`;
+        }
+
+        const badgeJob = pegawai.jobSet ? `<span style="font-size: 10.5px; padding: 2px 6px; border-radius: 4px; background: #f1f5f9; color: #475569; font-weight: 600;">${pegawai.jobSet}</span>` : '-';
+        const badgeKontrak = (pegawai.nomorKontrak && pegawai.nomorKontrak !== 'Tidak Aktif' && pegawai.nomorKontrak !== 'Tidak aktif')
+            ? `<span class="badge-kontrak">${pegawai.nomorKontrak}</span>`
+            : `<span style="color: #94a3b8; font-style: italic; font-size: 10.5px;">${pegawai.nomorKontrak || 'Tidak Aktif'}</span>`;
+
+        // Kolom Alamat tidak ditampilkan di tabel, tetap tersimpan di database dan bisa diubah lewat modal edit
+        tr.innerHTML = `
+            <td style="text-align: center; font-size: 11px;">${idx + 1}</td>
+            <td style="text-align: center; font-family: ui-monospace, monospace; font-weight: 700; font-size: 11px;">${pegawai.id}</td>
+            <td style="text-align: center;">${badgeStatus}</td>
+            <td style="padding-left: 8px; font-weight: 600; font-size: 11px;">${pegawai.nama}</td>
+            <td style="text-align: center; font-size: 11px; color: #475569;">${pegawai.tglLahir || '--'}</td>
+            <td style="font-size: 11px;">${pegawai.jabatanPosisi || '--'}</td>
+            <td style="text-align: center;">${badgeJob}</td>
+            <td style="padding: 3px 6px;">${htmlMasaKontrak}</td>
+            <td style="font-size: 10.5px;">${badgeKontrak}</td>
+            <td style="text-align: right; padding-right: 8px; font-size: 11px; font-weight: 600;">${pegawai.nominal || '-'}</td>
+            <td style="text-align: center;">
+                <div style="display: inline-flex; gap: 4px; align-items: center; justify-content: center;">
+                    <button type="button" class="btn btn-ghost" style="height: 24px; padding: 0 6px; font-size: 10.5px; border: 1px solid var(--border-subtle);" onclick="editMasterPegawai('${pegawai.id}')" title="Ubah Data Pegawai Ini (Termasuk Alamat)">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Edit
+                    </button>
+                    <button type="button" class="btn btn-hapus-pegawai" style="height: 24px; padding: 0 6px; font-size: 10.5px;" onclick="hapusMasterPegawai('${pegawai.id}', '${pegawai.nama}')" title="Hapus Pegawai">
+                        <svg class="icon-svg" viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        Hapus
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function editMasterPegawai(id) {
+    const database = (typeof db !== "undefined" && db) ? db : (typeof firebase !== "undefined" && firebase.database ? firebase.database() : null);
+    if (!database) return;
+
+    database.ref('databasePegawai/' + id).once('value', (snapshot) => {
+        const p = snapshot.val();
+        if (!p) return;
+
+        bukaModalMasterPegawai();
+        const titleEl = document.getElementById("formMasterTitle");
+        if (titleEl) {
+            titleEl.innerHTML = `
+                <span class="badge-mode-master badge-mode-edit">Mode Edit</span>
+                <span>Edit Pegawai: [${p.id}] ${p.nama}</span>
+            `;
+        }
+        const saveBtn = document.querySelector("#modalMasterPegawai .btn-modal-save");
+        if (saveBtn) {
+            saveBtn.innerHTML = `
+                <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Simpan Perubahan Master
+            `;
+        }
+
+        const idEl = document.getElementById("masterId");
+        if (idEl) { idEl.value = p.id; idEl.readOnly = true; }
+        if (document.getElementById("masterStatus")) document.getElementById("masterStatus").value = p.status || "Aktif";
+        if (document.getElementById("masterNama")) document.getElementById("masterNama").value = p.nama || "";
+        if (document.getElementById("masterTglLahir")) document.getElementById("masterTglLahir").value = parseStringToYMD(p.tglLahir) || "";
+        if (document.getElementById("masterAlamat")) document.getElementById("masterAlamat").value = p.alamat || "";
+
+        // Jabatan Posisi Dropdown
+        const jabEl = document.getElementById("masterJabatanPosisi");
+        if (jabEl) {
+            jabEl.value = p.jabatanPosisi || "Tenaga Keamanan";
+            if (p.jabatanPosisi && jabEl.value !== p.jabatanPosisi) {
+                const opt = new Option(p.jabatanPosisi, p.jabatanPosisi, true, true);
+                jabEl.add(opt);
+            }
+        }
+
+        // Job Set Dropdown
+        const jobEl = document.getElementById("masterJobSet");
+        if (jobEl) {
+            jobEl.value = p.jobSet || "Satpam";
+            if (p.jobSet && jobEl.value !== p.jobSet) {
+                const opt = new Option(p.jobSet, p.jobSet, true, true);
+                jobEl.add(opt);
+            }
+        }
+
+        if (document.getElementById("masterKontrakMulai")) document.getElementById("masterKontrakMulai").value = parseStringToYMD(p.kontrakMulai) || "";
+        if (document.getElementById("masterKontrakBerakhir")) document.getElementById("masterKontrakBerakhir").value = parseStringToYMD(p.kontrakBerakhir) || "";
+        if (document.getElementById("masterKontrak")) document.getElementById("masterKontrak").value = p.nomorKontrak || "";
+        if (document.getElementById("masterNominal")) document.getElementById("masterNominal").value = p.nominal || "Rp. 3.600.000";
+        if (document.getElementById("masterUnitKerja")) document.getElementById("masterUnitKerja").value = p.unitKerja || "Kanreg XIV";
+
+        onJobSetChange();
+    });
+}
+
+function hapusMasterPegawai(id, nama) {
+    const user = window.currentUser || (typeof activeUser !== "undefined" ? activeUser : null);
+    if (user && user.role !== 'administrator') {
+        alert("Hanya Administrator yang memiliki wewenang untuk menghapus pegawai dari Database Master.");
+        return;
+    }
+
+    const database = (typeof db !== "undefined" && db) ? db : (typeof firebase !== "undefined" && firebase.database ? firebase.database() : null);
+    if (!database) return;
+
+    if (confirm(`Apakah Anda yakin ingin menghapus pegawai [${id} - ${nama}] dari Database Master?`)) {
+        database.ref('databasePegawai/' + id).remove((err) => {
+            if (err) {
+                alert("Gagal menghapus: " + err.message);
+            } else {
+                alert(`✅ Pegawai [${nama}] berhasil dihapus dari Database Master.`);
+            }
+        });
+    }
+}
+
+// ==========================================================================
+// FITUR AUTO-HIDE / COLLAPSIBLE TABEL MASTER PEGAWAI & PPNPN
+// ==========================================================================
+function toggleTabelMasterPegawai(forceOpen) {
+    const body = document.getElementById('collapsibleMasterPegawaiBody');
+    const label = document.getElementById('labelToggleMaster');
+    const chevron = document.getElementById('iconChevronMaster');
+    const badge = document.getElementById('badgeCollapseMaster');
+    if (!body) return;
+
+    const isCurrentlyHidden = (body.style.display === 'none' || !body.style.display);
+    const shouldOpen = (forceOpen !== undefined) ? forceOpen : isCurrentlyHidden;
+
+    if (shouldOpen) {
+        body.style.display = 'block';
+        if (label) label.innerText = 'Tutup Tabel Pegawai';
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+        if (badge) {
+            badge.innerText = 'Terbuka';
+            badge.classList.add('badge-open');
+        }
+        // Render data pegawai jika ada data di cache atau panggil muatDatabasePegawai
+        if (typeof renderTabelDatabasePegawai === 'function') {
+            renderTabelDatabasePegawai();
+        }
+        if (!window.cachedListPegawai || window.cachedListPegawai.length === 0) {
+            if (typeof muatDatabasePegawai === 'function') muatDatabasePegawai();
+        }
+    } else {
+        body.style.display = 'none';
+        if (label) label.innerText = 'Buka Tabel Pegawai';
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+        if (badge) {
+            badge.innerText = 'Tersembunyi';
+            badge.classList.remove('badge-open');
+        }
+    }
+}
