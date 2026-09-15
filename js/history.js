@@ -52,7 +52,9 @@ function saveToHistory(isSilent = false) {
         namaUserFix = "Operator";
     }
 
-    let unitKerjaFix = (activeUser && activeUser.unitKerja) ? activeUser.unitKerja : "Kanreg XIV";
+    let unitKerjaFix = (activeUser && activeUser.unitKerja) ? activeUser.unitKerja : "Kanreg XIV BKN";
+    if (unitKerjaFix === "Kanreg XIV") unitKerjaFix = "Kanreg XIV BKN";
+    if (unitKerjaFix === "UPT Sorong") unitKerjaFix = "UPT BKN Sorong";
 
     // Build Payload State
     let currentState = {
@@ -291,6 +293,17 @@ function restoreFromFirebase(timestampId) {
                     // A. Timpa Variabel Global Aplikasi
                     globalRekap = selectedState.globalRekap || {};
                     dataPegawai = selectedState.dataPegawai || {};
+                    if (typeof getNamaPegawaiMaster === "function") {
+                        Object.keys(dataPegawai).forEach(id => {
+                            dataPegawai[id] = getNamaPegawaiMaster(id, dataPegawai[id]);
+                        });
+                        Object.keys(globalRekap).forEach(key => {
+                            if (globalRekap[key] && globalRekap[key].id) {
+                                globalRekap[key].nama = getNamaPegawaiMaster(globalRekap[key].id, globalRekap[key].nama);
+                                globalRekap[key].role = getJabatanPegawaiMaster(globalRekap[key].id, globalRekap[key].role);
+                            }
+                        });
+                    }
                     activeYear = selectedState.activeYear;
                     activeMonth = selectedState.activeMonth;
                     namaBulanTahun = selectedState.namaBulanTahun;
@@ -455,7 +468,7 @@ function recheckStatusFinalReport() {
         btn.style.opacity = "1";
         btn.style.cursor = "pointer";
         btn.style.backgroundColor = "#27ae60";
-        noteMsg.innerText = "✅ Seluruh data sudah bersih dan tidak ada catatan 'Lupa Absen'. Rekap final bulan ini siap disimpan ke database.";
+        noteMsg.innerText = "Seluruh data sudah bersih dan tidak ada catatan 'Lupa Absen'. Rekap final bulan ini siap disimpan ke database.";
     }
 }
 
@@ -499,7 +512,9 @@ window.saveReportFinal = function() {
         }
 
         let namaUserFix = (activeUser && (activeUser.nama || activeUser.namaLengkap || activeUser.username)) ? (activeUser.nama || activeUser.namaLengkap || activeUser.username) : "Operator";
-        let unitKerjaFix = (activeUser && activeUser.unitKerja) ? activeUser.unitKerja : "Kanreg XIV";
+        let unitKerjaFix = (activeUser && activeUser.unitKerja) ? activeUser.unitKerja : "Kanreg XIV BKN";
+        if (unitKerjaFix === "Kanreg XIV") unitKerjaFix = "Kanreg XIV BKN";
+        if (unitKerjaFix === "UPT Sorong") unitKerjaFix = "UPT BKN Sorong";
 
         // 3. Persiapkan Data Payload Final
         let now = new Date();
@@ -703,7 +718,9 @@ window.openFinalHistoryModal = function() {
                     var countPegawai = (item.dataPegawai) ? Object.keys(item.dataPegawai).length : ((item.globalRekap) ? Object.keys(item.globalRekap).length : 0);
                     var namaBulanDisplay = item.namaBulanTahun ? item.namaBulanTahun : (item.reportTitle ? item.reportTitle.replace("Rekap Final Presensi ", "") : "Periode");
                     
-                    var unitKerjaDisplay = item.unitKerja || item.savedByUnitKerja || "Kanreg XIV";
+                    var unitKerjaDisplay = item.unitKerja || item.savedByUnitKerja || "Kanreg XIV BKN";
+                    if (unitKerjaDisplay === "Kanreg XIV") unitKerjaDisplay = "Kanreg XIV BKN";
+                    if (unitKerjaDisplay === "UPT Sorong") unitKerjaDisplay = "UPT BKN Sorong";
                     var savedByDisplay = item.savedByNama || item.namaUser || item.savedBy || "Operator";
                     
                     var titleDisplay = "Laporan - " + namaBulanDisplay + " - Pegawai " + unitKerjaDisplay;

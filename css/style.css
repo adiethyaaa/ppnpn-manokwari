@@ -3152,3 +3152,170 @@ tr.row-pegawai-tidak-aktif:hover td {
     color: #047857;
     border-color: #a7f3d0;
 }
+
+/* ==========================================================================
+   TOOLTIP HOVER DATA PEGAWAI MASTER PADA TABEL PRESENSI & REKAP
+   ========================================================================== */
+.pegawai-hover-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.pegawai-hover-wrapper:hover {
+    z-index: 1000;
+}
+
+.pegawai-nama-link {
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    transition: color 0.15s ease;
+    border-bottom: 1px dotted rgba(59, 130, 246, 0.4);
+}
+
+.pegawai-hover-wrapper:hover .pegawai-nama-link {
+    color: #1d4ed8;
+    border-bottom-color: #1d4ed8;
+}
+
+.pegawai-hover-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 250px;
+    max-width: 320px;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.18), 0 8px 10px -6px rgba(15, 23, 42, 0.12);
+    padding: 10px 12px;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(4px);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+    text-align: left;
+    white-space: normal;
+}
+
+.pegawai-hover-wrapper:hover .pegawai-hover-popover {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.pegawai-hover-popover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 18px;
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent transparent #cbd5e1 transparent;
+}
+
+.pegawai-hover-popover::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 19px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent #ffffff transparent;
+}
+
+.pegawai-popover-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 11px;
+    font-weight: 700;
+    color: #047857;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.pegawai-popover-body {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.pegawai-popover-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 11.5px;
+    line-height: 1.35;
+}
+
+.pegawai-popover-row .popover-label {
+    color: #64748b;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.pegawai-popover-row .popover-val {
+    color: #0f172a;
+    text-align: right;
+    word-break: break-word;
+}
+
+/* ==========================================================================
+   BADGE JABATAN POSISI
+   ========================================================================== */
+.badge-jabatan-posisi {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2.5px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+.badge-jabatan-keamanan-pppk {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #6ee7b7;
+}
+.badge-jabatan-keamanan {
+    background: #f0fdf4;
+    color: #15803d;
+    border-color: #bbf7d0;
+}
+.badge-jabatan-pengemudi-pppk {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #93c5fd;
+}
+.badge-jabatan-pengemudi {
+    background: #f0f9ff;
+    color: #0369a1;
+    border-color: #bae6fd;
+}
+.badge-jabatan-kebersihan-pppk {
+    background: #faf5ff;
+    color: #7e22ce;
+    border-color: #d8b4fe;
+}
+.badge-jabatan-kebersihan {
+    background: #fdf4ff;
+    color: #a21caf;
+    border-color: #f0abfc;
+}
+.badge-jabatan-pramubakti-pppk {
+    background: #fefce8;
+    color: #a16207;
+    border-color: #fde047;
+}
+.badge-jabatan-pramubakti {
+    background: #f8fafc;
+    color: #334155;
+    border-color: #cbd5e1;
+}

@@ -110,7 +110,9 @@ async function muatDaftarUser() {
 
             const tr = document.createElement("tr");
             const roleBadge = user.role === 'administrator' ? 'status-hn' : 'status-dl';
-            const unitTeks = user.unitKerja || 'Kanreg XIV';
+            let unitTeks = user.unitKerja || 'Kanreg XIV BKN';
+            if (unitTeks === 'Kanreg XIV') unitTeks = 'Kanreg XIV BKN';
+            if (unitTeks === 'UPT Sorong') unitTeks = 'UPT BKN Sorong';
             
             tr.innerHTML = `
                 <td style="padding-left: 14px;"><b>${user.username}</b></td>
@@ -154,7 +156,10 @@ function editUser(username) {
         document.getElementById("adminUsername").readOnly = true;
         document.getElementById("adminPassword").value = u.password || "";
         document.getElementById("adminNama").value = u.nama || "";
-        document.getElementById("adminUnitKerja").value = u.unitKerja || "Kanreg XIV"; // Load Unit Kerja
+        let valUnit = u.unitKerja || "Kanreg XIV BKN";
+        if (valUnit === "Kanreg XIV") valUnit = "Kanreg XIV BKN";
+        if (valUnit === "UPT Sorong") valUnit = "UPT BKN Sorong";
+        document.getElementById("adminUnitKerja").value = valUnit; // Load Unit Kerja
         document.getElementById("adminRole").value = u.role || "operator";
         togglePermBox();
 
@@ -173,7 +178,7 @@ function resetFormAdmin() {
     document.getElementById("adminUsername").readOnly = false;
     document.getElementById("adminPassword").value = "";
     document.getElementById("adminNama").value = "";
-    document.getElementById("adminUnitKerja").value = "Kanreg XIV"; // Reset ke Kanreg XIV
+    document.getElementById("adminUnitKerja").value = "Kanreg XIV BKN"; // Reset ke Kanreg XIV BKN
     document.getElementById("adminRole").value = "operator";
     togglePermBox();
 }

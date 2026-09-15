@@ -122,11 +122,15 @@ async function prosesLogin() {
             const user = snapshot.val();
 
             if (user && String(user.password).trim() === passwordVal) {
+                let unitVal = user.unitKerja || 'Kanreg XIV BKN';
+                if (unitVal === 'Kanreg XIV') unitVal = 'Kanreg XIV BKN';
+                if (unitVal === 'UPT Sorong') unitVal = 'UPT BKN Sorong';
+
                 const dataUserLogin = {
                     username: user.username || usernameVal,
                     nama: user.nama || user.namaLengkap || user.username || usernameVal,
                     role: user.role || 'operator',
-                    unitKerja: user.unitKerja || 'Kanreg XIV',
+                    unitKerja: unitVal,
                     permissions: user.permissions || {}
                 };
 
@@ -401,7 +405,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const elUnit = document.getElementById("lblSessionUnit");
             if (elUnit) {
-                elUnit.innerText = activeUser.unitKerja || "Kanreg XIV";
+                let unitDisplay = activeUser.unitKerja || "Kanreg XIV BKN";
+                if (unitDisplay === "Kanreg XIV") unitDisplay = "Kanreg XIV BKN";
+                if (unitDisplay === "UPT Sorong") unitDisplay = "UPT BKN Sorong";
+                elUnit.innerText = unitDisplay;
             }
 
             // Tampilkan tombol kelola admin di dropdown jika administrator

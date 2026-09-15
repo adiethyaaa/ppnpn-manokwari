@@ -183,6 +183,11 @@ function terapkanHakAksesUI() {
 // GLOBAL STATE APLIKASI
 let globalRekap = {};
 let dataPegawai = {}; 
+window.cachedListPegawai = [];
+try {
+    const savedMaster = localStorage.getItem('cached_database_pegawai');
+    if (savedMaster) window.cachedListPegawai = JSON.parse(savedMaster);
+} catch (e) {}
 let activeYear = null;
 let activeMonth = null; 
 let namaBulanTahun = "";
@@ -254,6 +259,17 @@ function muatStateSesiPresensi() {
         if (state && state.globalRekap && Object.keys(state.globalRekap).length > 0) {
             globalRekap = state.globalRekap;
             dataPegawai = state.dataPegawai || {};
+            if (typeof getNamaPegawaiMaster === "function") {
+                Object.keys(dataPegawai).forEach(id => {
+                    dataPegawai[id] = getNamaPegawaiMaster(id, dataPegawai[id]);
+                });
+                Object.keys(globalRekap).forEach(key => {
+                    if (globalRekap[key] && globalRekap[key].id) {
+                        globalRekap[key].nama = getNamaPegawaiMaster(globalRekap[key].id, globalRekap[key].nama);
+                        globalRekap[key].role = getJabatanPegawaiMaster(globalRekap[key].id, globalRekap[key].role);
+                    }
+                });
+            }
             activeYear = state.activeYear;
             activeMonth = state.activeMonth;
             namaBulanTahun = state.namaBulanTahun || "";
@@ -365,8 +381,9 @@ function updateCheckboxPegawaiManual() {
         return;
     }
 
-    ids.sort((a,b) => (dataPegawai[a] || '').localeCompare(dataPegawai[b] || '')).forEach(id => {
-        let namaLengkap = dataPegawai[id];
+    ids.sort((a,b) => comparePegawaiByJabatanThenNama(a, b, dataPegawai[a], dataPegawai[b])).forEach(id => {
+        let namaLengkap = getNamaPegawaiMaster(id, dataPegawai[id]);
+        let masterJabatan = getJabatanPegawaiMaster(id);
         let label = document.createElement("label");
         label.className = "manual-pegawai-item";
         label.style.display = "flex";
@@ -376,7 +393,7 @@ function updateCheckboxPegawaiManual() {
         label.style.cursor = "pointer";
         label.style.fontSize = "12px";
         label.style.borderRadius = "var(--radius-sm)";
-        label.innerHTML = `<input type="checkbox" class="manual-pegawai-checkbox" value="${id}" onchange="updateSelectedPegawaiBadge()" style="accent-color: var(--brand-accent); width: 14px; height: 14px; cursor: pointer; flex-shrink: 0;"> <span style="line-height: 1.3;">${namaLengkap} <small style="color: var(--text-muted); font-size: 10.5px;">(ID: ${id})</small></span>`;
+        label.innerHTML = `<input type="checkbox" class="manual-pegawai-checkbox" value="${id}" onchange="updateSelectedPegawaiBadge()" style="accent-color: var(--brand-accent); width: 14px; height: 14px; cursor: pointer; flex-shrink: 0;"> <span style="line-height: 1.3;">${namaLengkap} <small style="color: var(--text-muted); font-size: 10.5px;">(${masterJabatan} - ID: ${id})</small></span>`;
         container.appendChild(label);
     });
 
@@ -492,17 +509,14 @@ function updateFilterNamaDropdown() {
     const selectedRole = document.getElementById('filterRole')?.value || "";
     selectFilter.innerHTML = '<option value="">-- Semua Pegawai dan PPNPN --</option>';
     
-    Object.keys(dataPegawai).sort((a,b) => dataPegawai[a].localeCompare(dataPegawai[b])).forEach(id => {
-        let role = "STAFF"; 
-        let firstKey = Object.keys(globalRekap).find(k => k.startsWith(id + "_"));
-        if (firstKey) {
-            role = globalRekap[firstKey].role || "STAFF";
-        }
+    Object.keys(dataPegawai).sort((a,b) => comparePegawaiByJabatanThenNama(a, b, dataPegawai[a], dataPegawai[b])).forEach(id => {
+        let masterNama = getNamaPegawaiMaster(id, dataPegawai[id]);
+        let masterJabatan = getJabatanPegawaiMaster(id);
         
-        if (selectedRole === "" || role === selectedRole) {
+        if (selectedRole === "" || masterJabatan === selectedRole) {
             let opt = document.createElement("option");
-            opt.value = dataPegawai[id].toLowerCase();
-            opt.text = dataPegawai[id];
+            opt.value = masterNama.toLowerCase();
+            opt.text = `${masterNama} (${masterJabatan})`;
             selectFilter.appendChild(opt);
         }
     });
@@ -915,6 +929,241 @@ function jalankanRecheck() {
 }
 
 // =========================================================
+// HELPER DATABASE MASTER PEGAWAI & SORTING JABATAN HIRARKIS
+// =========================================================
+function getMasterPegawai(id, fallbackNama = '') {
+    let list = window.cachedListPegawai;
+    if (!list || list.length === 0) {
+        try {
+            const saved = localStorage.getItem('cached_database_pegawai');
+            if (saved) {
+                list = JSON.parse(saved);
+                window.cachedListPegawai = list;
+            }
+        } catch (e) {}
+    }
+    if (!list || list.length === 0) return null;
+
+    const sId = id !== undefined && id !== null ? String(id).trim() : '';
+    const sNama = fallbackNama !== undefined && fallbackNama !== null ? String(fallbackNama).trim() : '';
+
+    // 1. Pencocokan ID Persis (String Case-Insensitive)
+    if (sId) {
+        let found = list.find(p => p.id && String(p.id).trim().toLowerCase() === sId.toLowerCase());
+        if (found) return found;
+    }
+
+    // 2. Pencocokan Nama Lengkap Persis (Case-Insensitive)
+    if (sNama) {
+        let found = list.find(p => p.nama && p.nama.trim().toLowerCase() === sNama.toLowerCase());
+        if (found) return found;
+    }
+
+    // 3. Pencocokan Nama yang Dinormalisasi (Abaikan spasi, tanda baca, simbol)
+    if (sNama) {
+        const cleanTarget = sNama.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cleanTarget.length >= 3) {
+            let found = list.find(p => {
+                if (!p.nama) return false;
+                const cleanP = p.nama.toLowerCase().replace(/[^a-z0-9]/g, '');
+                return cleanP === cleanTarget;
+            });
+            if (found) return found;
+
+            // Substring inclusion jika ada gelar atau perbedaan kata panggilan
+            found = list.find(p => {
+                if (!p.nama) return false;
+                const cleanP = p.nama.toLowerCase().replace(/[^a-z0-9]/g, '');
+                return (cleanP.length >= 4 && (cleanP.includes(cleanTarget) || cleanTarget.includes(cleanP)));
+            });
+            if (found) return found;
+        }
+    }
+
+    // 4. Pencocokan Numerik ID (jika sId bukan nomor baris 1-99 yang ambigu)
+    if (sId) {
+        const numId = parseInt(sId, 10);
+        if (!isNaN(numId) && numId > 99) {
+            let found = list.find(p => parseInt(p.id, 10) === numId);
+            if (found) return found;
+        }
+    }
+
+    // 5. Pencocokan jika sId ternyata adalah Nama Pegawai
+    if (sId && !sNama) {
+        const cleanTargetId = sId.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cleanTargetId.length >= 3) {
+            let found = list.find(p => {
+                if (!p.nama) return false;
+                const cleanP = p.nama.toLowerCase().replace(/[^a-z0-9]/g, '');
+                return cleanP === cleanTargetId || (cleanP.length >= 4 && (cleanP.includes(cleanTargetId) || cleanTargetId.includes(cleanP)));
+            });
+            if (found) return found;
+        }
+    }
+
+    return null;
+}
+
+function getNamaPegawaiMaster(id, fallbackNama = '') {
+    const m = getMasterPegawai(id, fallbackNama);
+    if (m && m.nama && m.nama.trim()) {
+        return m.nama.trim();
+    }
+    return fallbackNama || (id ? String(id).trim() : '');
+}
+
+function getIdPegawaiMaster(id, fallbackNama = '') {
+    const m = getMasterPegawai(id, fallbackNama);
+    if (m && m.id && String(m.id).trim()) {
+        return String(m.id).trim();
+    }
+    return id ? String(id).trim() : '';
+}
+
+function getJabatanPegawaiMaster(id, fallbackJabatan = 'Tenaga Pramubakti', fallbackNama = '') {
+    const m = getMasterPegawai(id, fallbackNama);
+    if (m && m.jabatanPosisi && m.jabatanPosisi.trim()) {
+        return m.jabatanPosisi.trim();
+    }
+    if (fallbackJabatan) {
+        const f = String(fallbackJabatan).toUpperCase();
+        if (f.includes('KEAMANAN') || f.includes('SATPAM') || f.includes('SECURITY')) {
+            return (f.includes('PPPK') || f.includes('P3K')) ? 'Tenaga Keamanan - PPPK' : 'Tenaga Keamanan';
+        }
+        if (f.includes('PENGEMUDI') || f.includes('DRIVER') || f.includes('SOPIR')) {
+            return (f.includes('PPPK') || f.includes('P3K')) ? 'Tenaga Pengemudi - PPPK' : 'Tenaga Pengemudi';
+        }
+        if (f.includes('KEBERSIHAN') || f.includes('CLEANING') || f.includes('OB') || f.includes('CS')) {
+            return (f.includes('PPPK') || f.includes('P3K')) ? 'Tenaga Kebersihan - PPPK' : 'Tenaga Kebersihan';
+        }
+        if (f.includes('PRAMUBAKTI') || f.includes('STAFF')) {
+            return (f.includes('PPPK') || f.includes('P3K')) ? 'Tenaga Pramubakti - PPPK' : 'Tenaga Pramubakti';
+        }
+        if (f.includes('PPPK') || f.includes('P3K') || f.includes('ASN')) {
+            return 'Tenaga Pramubakti - PPPK';
+        }
+    }
+    return fallbackJabatan || 'Tenaga Pramubakti';
+}
+
+function getJabatanSortRank(jabatanStr) {
+    if (!jabatanStr) return 99;
+    const j = String(jabatanStr).toUpperCase().trim();
+    
+    // 1. Tenaga Keamanan PPPK
+    if ((j.includes("KEAMANAN") || j.includes("SATPAM") || j.includes("SECURITY")) && (j.includes("PPPK") || j.includes("P3K"))) {
+        return 1;
+    }
+    // 2. Tenaga Keamanan tanpa PPPK
+    if (j.includes("KEAMANAN") || j.includes("SATPAM") || j.includes("SECURITY")) {
+        return 2;
+    }
+    // 3. Tenaga Pengemudi PPPK
+    if ((j.includes("PENGEMUDI") || j.includes("DRIVER") || j.includes("SOPIR")) && (j.includes("PPPK") || j.includes("P3K"))) {
+        return 3;
+    }
+    // 4. Tenaga Pengemudi tanpa PPPK
+    if (j.includes("PENGEMUDI") || j.includes("DRIVER") || j.includes("SOPIR")) {
+        return 4;
+    }
+    // 5. Tenaga Kebersihan PPPK
+    if ((j.includes("KEBERSIHAN") || j.includes("CLEANING") || j.includes("OB") || j.includes("CS")) && (j.includes("PPPK") || j.includes("P3K"))) {
+        return 5;
+    }
+    // 6. Tenaga Kebersihan tanpa PPPK
+    if (j.includes("KEBERSIHAN") || j.includes("CLEANING") || j.includes("OB") || j.includes("CS")) {
+        return 6;
+    }
+    // 7. Tenaga Pramubakti PPPK
+    if ((j.includes("PRAMUBAKTI") || j.includes("PRAMU")) && (j.includes("PPPK") || j.includes("P3K"))) {
+        return 7;
+    }
+    // 8. Tenaga Pramubakti tanpa PPPK
+    if (j.includes("PRAMUBAKTI") || j.includes("PRAMU")) {
+        return 8;
+    }
+    // PPPK / ASN umum jika ada
+    if (j.includes("PPPK") || j.includes("P3K") || j.includes("ASN")) {
+        return 9;
+    }
+    // Staff & lainnya
+    if (j.includes("STAFF")) {
+        return 10;
+    }
+    return 20;
+}
+
+function comparePegawaiByJabatanThenNama(idA, idB, fallbackNamaA = '', fallbackNamaB = '', roleA = '', roleB = '') {
+    const jabA = getJabatanPegawaiMaster(idA, roleA, fallbackNamaA);
+    const jabB = getJabatanPegawaiMaster(idB, roleB, fallbackNamaB);
+    const rankA = getJabatanSortRank(jabA);
+    const rankB = getJabatanSortRank(jabB);
+    if (rankA !== rankB) {
+        return rankA - rankB;
+    }
+    const namaA = getNamaPegawaiMaster(idA, fallbackNamaA);
+    const namaB = getNamaPegawaiMaster(idB, fallbackNamaB);
+    return namaA.localeCompare(namaB);
+}
+
+function getJabatanBadgeClass(jabatan) {
+    if (!jabatan) return 'badge-jabatan-pramubakti';
+    const j = String(jabatan).toUpperCase();
+    if (j.includes('KEAMANAN') || j.includes('SATPAM')) {
+        return (j.includes('PPPK') || j.includes('P3K')) ? 'badge-jabatan-keamanan-pppk' : 'badge-jabatan-keamanan';
+    }
+    if (j.includes('PENGEMUDI') || j.includes('DRIVER')) {
+        return (j.includes('PPPK') || j.includes('P3K')) ? 'badge-jabatan-pengemudi-pppk' : 'badge-jabatan-pengemudi';
+    }
+    if (j.includes('KEBERSIHAN') || j.includes('CLEANING')) {
+        return (j.includes('PPPK') || j.includes('P3K')) ? 'badge-jabatan-kebersihan-pppk' : 'badge-jabatan-kebersihan';
+    }
+    if (j.includes('PRAMUBAKTI') || j.includes('STAFF')) {
+        return (j.includes('PPPK') || j.includes('P3K')) ? 'badge-jabatan-pramubakti-pppk' : 'badge-jabatan-pramubakti';
+    }
+    if (j.includes('PPPK') || j.includes('P3K')) return 'badge-jabatan-keamanan-pppk';
+    return 'badge-jabatan-pramubakti';
+}
+
+function renderCellNamaPegawai(item) {
+    const id = item.id || '';
+    const masterPeg = getMasterPegawai(id, item.nama);
+    const masterNama = masterPeg && masterPeg.nama ? masterPeg.nama : getNamaPegawaiMaster(id, item.nama);
+    const masterJabatan = masterPeg && masterPeg.jabatanPosisi ? masterPeg.jabatanPosisi : getJabatanPegawaiMaster(id, item.jabatan || item.role, item.nama);
+    const officialId = masterPeg && masterPeg.id ? masterPeg.id : id;
+    const safeNama = (masterNama || '').replace(/"/g, '&quot;');
+    const safeJabatan = (masterJabatan || '').replace(/"/g, '&quot;');
+    const safeId = (officialId || '').replace(/"/g, '&quot;');
+
+    return `
+        <div class="pegawai-hover-wrapper">
+            <span class="pegawai-nama-link">${safeNama}</span>
+            <div class="pegawai-hover-popover" role="tooltip">
+                <div class="pegawai-popover-header">
+                    <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span>Database Master Pegawai</span>
+                </div>
+                <div class="pegawai-popover-body">
+                    <div class="pegawai-popover-row">
+                        <span class="popover-label">Nama Lengkap:</span>
+                        <span class="popover-val" style="font-weight: 700; color: #0f172a;">${safeNama}</span>
+                    </div>
+                    <div class="pegawai-popover-row">
+                        <span class="popover-label">Nama Jabatan:</span>
+                        <span class="popover-val" style="font-weight: 600; color: #047857;">${safeJabatan}</span>
+                    </div>
+                    <div class="pegawai-popover-row">
+                        <span class="popover-label">ID PPNPN:</span>
+                        <span class="popover-val" style="font-family: ui-monospace, monospace; color: #64748b;">${safeId}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// =========================================================
 // HIGH-PERFORMANCE VIEWPORT VIRTUAL SCROLL & MEMORY OPTIMIZATION
 // =========================================================
 window.tableDataMaster = [];
@@ -941,12 +1190,19 @@ function renderTabel() {
     }
 
     let daysInMonth = new Date(activeYear, activeMonth + 1, 0).getDate();
-    let employeesIds = Object.keys(dataPegawai).sort((a,b) => (dataPegawai[a] || '').localeCompare(dataPegawai[b] || ''));
+    // Urutkan pegawai berdasarkan hierarki jabatan: Keamanan PPPK -> Keamanan -> Pengemudi -> Kebersihan -> Pramubakti
+    let employeesIds = Object.keys(dataPegawai).sort((a, b) => 
+        comparePegawaiByJabatanThenNama(a, b, dataPegawai[a], dataPegawai[b])
+    );
 
     window.tableDataMaster = [];
 
     employeesIds.forEach(id => {
-        let nama = dataPegawai[id];
+        let masterPeg = getMasterPegawai(id, dataPegawai[id]);
+        let masterNama = masterPeg && masterPeg.nama ? masterPeg.nama : getNamaPegawaiMaster(id, dataPegawai[id]);
+        let officialId = masterPeg && masterPeg.id ? masterPeg.id : id;
+        dataPegawai[id] = masterNama;
+        let masterJabatan = masterPeg && masterPeg.jabatanPosisi ? masterPeg.jabatanPosisi : getJabatanPegawaiMaster(officialId, 'Tenaga Pramubakti', masterNama);
 
         for (let d = 1; d <= daysInMonth; d++) {
             let dStr = String(d).padStart(2, '0');
@@ -1118,9 +1374,11 @@ function renderTabel() {
 
             window.tableDataMaster.push({
                 key: key,
-                id: id,
-                nama: nama,
-                role: record.role || "STAFF",
+                id: officialId,
+                rawId: id,
+                nama: masterNama,
+                jabatan: masterJabatan,
+                role: masterJabatan,
                 shiftTipe: record.shiftTipe,
                 bgShift: bgShift,
                 colorShift: colorShift,
@@ -1290,8 +1548,8 @@ function buatHtmlBarisTabel(item, i) {
     return `
         <tr class="${item.trClass || ''}" data-key="${item.key}">
             <td class="nomor-urut">${i + 1}</td>
-            <td>${item.id}</td>
-            <td>${item.nama}</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">${item.id}</td>
+            <td>${renderCellNamaPegawai(item)}</td>
             <td><span class="shift-badge" style="background:${item.bgShift}; color:${item.colorShift};">${item.shiftTipe || "-"}</span></td>
             <td>${item.hariStr}</td>
             <td>${item.tanggalStr}</td>
@@ -1325,7 +1583,11 @@ function filterTabel() {
 
     // Filter array di memori tanpa manipulasi DOM berulang (hemat RAM dan respon instan)
     window.tableDataFiltered = window.tableDataMaster.filter(item => {
-        if (filterRole && item.role !== filterRole) return false;
+        if (filterRole) {
+            const jItem = item.jabatan || item.role || '';
+            const normJ = getJabatanPegawaiMaster(item.id, jItem);
+            if (normJ !== filterRole && jItem !== filterRole) return false;
+        }
         if (filterNama && !item.nama.toLowerCase().includes(filterNama)) return false;
         if (filterTanggal && !item.tanggalStr.toLowerCase().includes(filterTanggal)) return false;
         if (filterKehadiran && item.statusKehadiran !== filterKehadiran) return false;
@@ -1506,7 +1768,9 @@ function prosesExcelJadwal() {
 
                 // Jika data pegawai ditemukan, bangun rekap shift bulanan
                 if (idPegawai && namaPegawai) {
-                    dataPegawai[idPegawai] = namaPegawai;
+                    let masterNama = getNamaPegawaiMaster(idPegawai, namaPegawai);
+                    let masterJabatan = getJabatanPegawaiMaster(idPegawai, rolePegawai);
+                    dataPegawai[idPegawai] = masterNama;
                     let daysInMonth = new Date(tahun, bulan + 1, 0).getDate();
                     let startCol = (day1ColIndex !== -1) ? day1ColIndex : 4;
 
@@ -1524,7 +1788,7 @@ function prosesExcelJadwal() {
                         } else if (shiftCode === "M" || shiftCode === "MLM" || shiftCode === "MALAM" || shiftCode === "3") {
                             sTipe = "M";
                         } else if (shiftCode === "S" || shiftCode === "SIANG" || shiftCode === "2") {
-                            if (rolePegawai.toUpperCase().includes("SATPAM")) sTipe = "M";
+                            if (rolePegawai.toUpperCase().includes("SATPAM") || rolePegawai.toUpperCase().includes("KEAMANAN")) sTipe = "M";
                             else { sTipe = "CS"; mStat = "CS"; }
                         } else if (shiftCode === "CT" || shiftCode === "CUTI") {
                             sTipe = "CT";
@@ -1542,19 +1806,19 @@ function prosesExcelJadwal() {
                             sTipe = "OFF";
                         } else if (shiftCode === "") {
                             let dow = new Date(tahun, bulan, d).getDay();
-                            if (rolePegawai.toUpperCase().includes("SATPAM")) sTipe = "OFF";
+                            if (rolePegawai.toUpperCase().includes("SATPAM") || rolePegawai.toUpperCase().includes("KEAMANAN")) sTipe = "OFF";
                             else sTipe = (dow === 0 || dow === 6) ? "OFF" : "P";
                         }
 
                         globalRekap[key] = {
                             id: idPegawai,
-                            nama: namaPegawai,
+                            nama: masterNama,
                             tanggal: isoDate,
                             shiftTipe: sTipe,
                             waktuMasuk: null,
                             waktuPulang: null,
                             manualStatus: mStat,
-                            role: rolePegawai
+                            role: masterJabatan
                         };
                     }
                 }
@@ -2059,8 +2323,13 @@ function prosesBatchExport(tipe) {
 }
 
 function generateExcel(data, namaFileBase) {
+    let userUnit = (window.currentUser && window.currentUser.unitKerja) ? window.currentUser.unitKerja : "Kanreg XIV BKN";
+    if (userUnit === "Kanreg XIV") userUnit = "Kanreg XIV BKN";
+    if (userUnit === "UPT Sorong") userUnit = "UPT BKN Sorong";
+    const headerInstansi = (userUnit === "UPT BKN Sorong") ? "UPT BKN Sorong" : "Kanreg XIV BKN";
+
     const wsData = [
-        ["Kantor Regional XIV BKN Manokwari"],
+        [headerInstansi],
         [`Laporan Kehadiran Pegawai - Periode ${namaBulanTahun}`], [],
         ["No", "ID Pegawai", "Nama Pegawai", "Shift", "Hari", "Tanggal", "Kehadiran", "Jam Masuk", "Jam Pulang", "Total Waktu", "Ket/Kelebihan"]
     ];
@@ -2118,7 +2387,11 @@ function renderSingleEmployeePortraitPDF(doc, namaPegawai, data) {
     doc.setFontSize(11); doc.setFont("helvetica", "bold");
     doc.text(`Laporan Kehadiran - ${namaPegawai}`, startTextX, 10);
     doc.setFontSize(8.5); doc.setFont("helvetica", "normal");
-    doc.text(`Kantor Regional XIV BKN Manokwari | Periode: ${namaBulanTahun}`, startTextX, 14);
+    let userUnitSingle = (window.currentUser && window.currentUser.unitKerja) ? window.currentUser.unitKerja : "Kanreg XIV BKN";
+    if (userUnitSingle === "Kanreg XIV") userUnitSingle = "Kanreg XIV BKN";
+    if (userUnitSingle === "UPT Sorong") userUnitSingle = "UPT BKN Sorong";
+    let headerSingle = (userUnitSingle === "UPT BKN Sorong") ? "UPT BKN Sorong" : "Kanreg XIV BKN";
+    doc.text(`${headerSingle} | Periode: ${namaBulanTahun}`, startTextX, 14);
 
     let nonLjCount = 0;
     let totalWaktuMnt = 0;
@@ -2384,10 +2657,10 @@ function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari, t
             const listPegawaiRole = groupedByRole[roleName];
             if (!listPegawaiRole || listPegawaiRole.length === 0) return;
 
-            // Baris Header Kategori Role
+            // Baris Header Jabatan Role
             const totalCols = 3 + ((chunk.end - chunk.start + 1) * 2);
             bodyRows.push([{
-                content: `KATEGORI: ${roleName}`,
+                content: `JABATAN: ${roleName}`,
                 colSpan: totalCols,
                 styles: { fillColor: [52, 73, 94], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.5, halign: 'left', cellPadding: 1 }
             }]);
@@ -2527,12 +2800,17 @@ function generatePDFLandscapeChunked(groupedByRole, sortedRoleKeys, totalHari, t
 
     // FOOTER HALAMAN
     const totalPages = doc.internal.getNumberOfPages();
+    let userUnitLandscape = (window.currentUser && window.currentUser.unitKerja) ? window.currentUser.unitKerja : "Kanreg XIV BKN";
+    if (userUnitLandscape === "Kanreg XIV") userUnitLandscape = "Kanreg XIV BKN";
+    if (userUnitLandscape === "UPT Sorong") userUnitLandscape = "UPT BKN Sorong";
+    let footerInstansi = (userUnitLandscape === "UPT BKN Sorong") ? "UPT BKN Sorong" : "Kanreg XIV BKN";
+
     for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.setFontSize(6.5);
         doc.setFont("helvetica", "italic");
         doc.setTextColor(127, 140, 141);
-        doc.text("Laporan Presensi Pegawai v.15 - Kanreg XIV BKN Manokwari", 6, doc.internal.pageSize.getHeight() - 3.5);
+        doc.text(`Laporan Presensi Pegawai v.15 - ${footerInstansi}`, 6, doc.internal.pageSize.getHeight() - 3.5);
         doc.text(`Halaman ${i} dari ${totalPages}`, doc.internal.pageSize.getWidth() - 25, doc.internal.pageSize.getHeight() - 3.5);
     }
 
@@ -2595,7 +2873,7 @@ function renderTabelRekapitulasiHalamanUtama(doc, groupedByRole, sortedRoleKeys,
 
             bodyRows.push([
                 {
-                    content: `KATEGORI: ${roleName}`,
+                    content: `JABATAN: ${roleName}`,
                     colSpan: 17,
                     styles: { fillColor: [52, 73, 94], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.5, halign: 'left', cellPadding: 1 }
                 }
@@ -2841,14 +3119,15 @@ window.exportPreviewPDFLandscape = function() {
             let namaClean = String(rawNama).trim();
             if (!namaClean || namaClean === "-") return;
 
-            let uniqueKey = namaClean.toUpperCase();
             let idPpnP = String(item.idPpnPN || item.idPegawai || item.id || "").trim();
-            let role = String(item.role || item.kategori || item.jabatan || "STAFF").toUpperCase().trim();
+            let masterNama = getNamaPegawaiMaster(idPpnP, namaClean);
+            let role = getJabatanPegawaiMaster(idPpnP, item.role || item.kategori || item.jabatan || "STAFF");
+            let uniqueKey = idPpnP || masterNama.toUpperCase();
 
             if (!pegawaimap[uniqueKey]) {
                 pegawaimap[uniqueKey] = {
                     idPpnPN: idPpnP || "-",
-                    namaLengkap: namaClean,
+                    namaLengkap: masterNama,
                     role: role,
                     presensiHarian: {}
                 };
@@ -2889,7 +3168,7 @@ window.exportPreviewPDFLandscape = function() {
             tempGroupedByRole[r].sort((a, b) => a.namaLengkap.localeCompare(b.namaLengkap));
         });
 
-        const availableRoles = Object.keys(tempGroupedByRole).sort();
+        const availableRoles = Object.keys(tempGroupedByRole).sort((a, b) => getJabatanSortRank(a) - getJabatanSortRank(b));
         if (availableRoles.length === 0) {
             alert("Tidak ditemukan kategori pegawai pada data yang dipilih.");
             return;
@@ -2973,8 +3252,8 @@ function prosesExportPdfLandscapeDenganPilihan() {
         return;
     }
 
-    // Ambil list role terpilih
-    const selectedRoleKeys = Array.from(checkedBoxes).map(cb => cb.value).sort();
+    // Ambil list role terpilih dan urutkan sesuai hierarki jabatan
+    const selectedRoleKeys = Array.from(checkedBoxes).map(cb => cb.value).sort((a, b) => getJabatanSortRank(a) - getJabatanSortRank(b));
 
     // Ambil opsi spesimen TTD terpilih (manual / anchor)
     const radioSelected = document.querySelector('input[name="radioSpesimen"]:checked');
@@ -3141,6 +3420,8 @@ function muatDaftarPeriodeRekap() {
             let key = item.id;
             let namaPeriode = item.namaBulanTahun ? item.namaBulanTahun.trim() : (item.reportTitle ? item.reportTitle.replace("Rekap Final Presensi ", "").trim() : "Final");
             let unitDisplay = item.unitKerja || item.savedByUnitKerja || '';
+            if (unitDisplay === 'Kanreg XIV') unitDisplay = 'Kanreg XIV BKN';
+            if (unitDisplay === 'UPT Sorong') unitDisplay = 'UPT BKN Sorong';
             if (unitDisplay) unitDisplay = ` [${unitDisplay}]`;
 
             const opt = document.createElement('option');
@@ -3201,13 +3482,21 @@ function prosesKalkulasiRekap(pegawaiMap, rekapMap, yearVal, monthVal, periodeKe
         console.warn("Error parsing rekap overrides:", e);
     }
 
-    const employeeIds = Object.keys(pegawaiMap || {}).sort((a, b) => (pegawaiMap[a] || '').localeCompare(pegawaiMap[b] || ''));
+    // Urutkan pegawai rekap berdasarkan hierarki jabatan: Keamanan PPPK -> Keamanan -> Pengemudi -> Kebersihan -> Pramubakti
+    const employeeIds = Object.keys(pegawaiMap || {}).sort((a, b) => 
+        comparePegawaiByJabatanThenNama(a, b, pegawaiMap[a], pegawaiMap[b])
+    );
     const daysInMonth = (yearVal !== null && monthVal !== null) ? new Date(yearVal, monthVal + 1, 0).getDate() : 31;
 
     window.rekapRowsMaster = [];
 
-    employeeIds.forEach((id, index) => {
-        const nama = pegawaiMap[id];
+    employeeIds.forEach((rawId, index) => {
+        const rawNama = pegawaiMap[rawId] || '';
+        // Sandingkan ID PPNPN dan Nama Lengkap resmi dari Database Master Pegawai (aktif maupun tidak aktif)
+        const masterPeg = getMasterPegawai(rawId, rawNama);
+        const officialId = masterPeg && masterPeg.id ? String(masterPeg.id).trim() : String(rawId).trim();
+        const officialNama = masterPeg && masterPeg.nama ? String(masterPeg.nama).trim() : (rawNama || rawId);
+
         let role = "STAFF";
         let cs = 0, ct = 0, dl = 0, tk = 0, hn = 0, lj = 0;
         let tm = 0, pc = 0;
@@ -3217,9 +3506,13 @@ function prosesKalkulasiRekap(pegawaiMap, rekapMap, yearVal, monthVal, periodeKe
             let dStr = String(d).padStart(2, '0');
             let mStr = String(monthVal + 1).padStart(2, '0');
             let isoDate = `${yearVal}-${mStr}-${dStr}`;
-            let key = id + "_" + isoDate;
 
-            let rec = rekapMap[key];
+            // Cari absensi dari rekapMap dengan rawId, officialId, atau nama
+            let rec = rekapMap[rawId + "_" + isoDate] || 
+                      rekapMap[officialId + "_" + isoDate] ||
+                      (rawNama ? rekapMap[rawNama + "_" + isoDate] : null) ||
+                      (officialNama ? rekapMap[officialNama + "_" + isoDate] : null);
+
             if (!rec) {
                 let dateObj = new Date(yearVal, monthVal, d);
                 let dayOfWeek = dateObj.getDay();
@@ -3255,13 +3548,17 @@ function prosesKalkulasiRekap(pegawaiMap, rekapMap, yearVal, monthVal, periodeKe
             if (st.includes("PC")) pc++;
         }
 
+        const officialJabatan = masterPeg && masterPeg.jabatanPosisi
+            ? masterPeg.jabatanPosisi.trim()
+            : getJabatanPegawaiMaster(officialId, role, officialNama);
+
         let totalHadir = hn + tm + pc;
         let isOverridden = false;
         let catatan = "";
 
         // Terapkan override jika operator pernah memodifikasi data rekap
-        if (overrides[id]) {
-            const ov = overrides[id];
+        const ov = overrides[officialId] || overrides[rawId];
+        if (ov) {
             isOverridden = true;
             if (ov.hn !== undefined) hn = Number(ov.hn);
             if (ov.tm !== undefined) tm = Number(ov.tm);
@@ -3277,9 +3574,11 @@ function prosesKalkulasiRekap(pegawaiMap, rekapMap, yearVal, monthVal, periodeKe
 
         window.rekapRowsMaster.push({
             no: index + 1,
-            id: id,
-            nama: nama,
-            role: role,
+            id: officialId,
+            rawId: rawId,
+            nama: officialNama,
+            jabatan: officialJabatan,
+            role: officialJabatan,
             hariKerja: hariKerja,
             hn: hn,
             tm: tm,
@@ -3329,21 +3628,26 @@ function renderTabelRekap() {
 
         const safeNama = (item.nama || '').replace(/'/g, "\\'");
 
-        // Tombol cek sisa cuti tahunan digabungkan di sebelah kanan nama pegawai
+        // REKAP KEHADIRAN:
+        // 1. Kolom ID PPNPN disandingkan dari database master pegawai (aktif/tidak aktif)
+        // 2. Efek hover popover DIHAPUS dari tabel rekap (hanya aktif pada tab presensi harian)
+        // 3. Nama tampil sebagai teks tebal biasa dengan tombol Cek Sisa Cuti di samping kanannya
         html += `
             <tr>
                 <td style="text-align: center;">${idx + 1}</td>
-                <td style="text-align: center; font-family: ui-monospace, monospace; font-size: 11px;">${item.id}</td>
+                <td style="text-align: center; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 600; color: #1e293b;">${item.id}</td>
                 <td>
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                        <span style="font-weight: 600;">${item.nama}</span>
-                        <button type="button" class="btn-cek-cuti" onclick="cekSisaCutiTahunan('${item.id}', '${safeNama}')" title="Cek sisa cuti tahunan ${item.nama}">
+                        <span style="font-weight: 600; color: #1e293b; font-size: 12px;">${item.nama}</span>
+                        <button type="button" class="btn-cek-cuti" onclick="cekSisaCutiTahunan('${item.id}', '${safeNama}')" title="Cek sisa cuti tahunan ${safeNama}">
                             <svg class="icon-svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                             Cek Sisa Cuti
                         </button>
                     </div>
                 </td>
-                <td style="text-align: center;"><span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: #f1f5f9; color: #475569; font-weight: 600;">${item.role}</span></td>
+                <td style="text-align: center;">
+                    <span class="badge-jabatan-posisi ${getJabatanBadgeClass(item.jabatan || item.role)}">${item.jabatan || item.role}</span>
+                </td>
                 <td style="text-align: center; font-weight: 600;">${item.hariKerja}</td>
                 <td style="text-align: center;">${badgeHN}</td>
                 <td style="text-align: center;">${badgeTM}</td>
@@ -3462,9 +3766,13 @@ function tutupModalSisaCuti() {
     if (modal) modal.style.display = 'none';
 }
 
-function hitungAkumulasiCutiTahunan(employeeId, targetYear) {
+function hitungAkumulasiCutiTahunan(employeeId, targetYear, fallbackAltId = null) {
     let totalCT = 0;
     let rincian = [];
+
+    const masterPeg = getMasterPegawai(employeeId);
+    const officialId = masterPeg && masterPeg.id ? String(masterPeg.id).trim() : String(employeeId || '').trim();
+    const altId = fallbackAltId ? String(fallbackAltId).trim() : '';
 
     const histories = window.cachedFinalHistories || [];
     // Kelompokkan per bulan agar deduping versi final
@@ -3497,15 +3805,22 @@ function hitungAkumulasiCutiTahunan(employeeId, targetYear) {
             if (saved) ov = JSON.parse(saved);
         } catch (e) {}
 
-        if (ov && ov[employeeId] && ov[employeeId].ct !== undefined) {
-            ctBulan = Number(ov[employeeId].ct) || 0;
+        let matchedOv = null;
+        if (ov) {
+            matchedOv = ov[officialId] || ov[employeeId] || (altId ? ov[altId] : null);
+        }
+
+        if (matchedOv && matchedOv.ct !== undefined) {
+            ctBulan = Number(matchedOv.ct) || 0;
         } else if (h.globalRekap) {
             const daysInMonth = new Date(targetYear, mo + 1, 0).getDate();
             for (let d = 1; d <= daysInMonth; d++) {
                 let dStr = String(d).padStart(2, '0');
                 let mStr = String(mo + 1).padStart(2, '0');
                 let isoDate = `${targetYear}-${mStr}-${dStr}`;
-                let rec = h.globalRekap[employeeId + "_" + isoDate];
+                let rec = h.globalRekap[officialId + "_" + isoDate] || 
+                          h.globalRekap[employeeId + "_" + isoDate] || 
+                          (altId ? h.globalRekap[altId + "_" + isoDate] : null);
                 if (rec) {
                     let st = (typeof getStatusKehadiran === "function") ? getStatusKehadiran(rec) : (rec.status || "");
                     if (st === "CT" || st === "Cuti") {
@@ -3534,12 +3849,12 @@ function updateRekapStats(total, hadir, tk, cs, ct, dl) {
 }
 
 function editRekapPegawai(id) {
-    const item = window.rekapRowsMaster.find(r => r.id === id);
+    const item = (window.rekapRowsMaster || []).find(r => r.id === id || r.rawId === id);
     if (!item) return;
 
     document.getElementById('editRekapPegawaiId').value = item.id;
     document.getElementById('modalRekapNamaTitle').innerText = item.nama;
-    document.getElementById('modalRekapSubTitle').innerText = `ID: ${item.id} | Kategori: ${item.role} | Hari Kerja: ${item.hariKerja}`;
+    document.getElementById('modalRekapSubTitle').innerText = `ID PPNPN: ${item.id} | Jabatan: ${item.jabatan || item.role} | Hari Kerja: ${item.hariKerja}`;
 
     document.getElementById('editRekapHN').value = item.hn;
     document.getElementById('editRekapTM').value = item.tm;
@@ -3564,6 +3879,9 @@ function simpanEditRekapPegawai() {
     const id = document.getElementById('editRekapPegawaiId').value;
     if (!id) return;
 
+    const rowItem = (window.rekapRowsMaster || []).find(r => r.id === id || r.rawId === id);
+    const rawId = rowItem ? rowItem.rawId : null;
+
     const periodeKey = window.activeRekapPeriodeKey || 'sesi_aktif';
     let overrides = {};
     try {
@@ -3571,7 +3889,7 @@ function simpanEditRekapPegawai() {
         if (saved) overrides = JSON.parse(saved);
     } catch (e) {}
 
-    overrides[id] = {
+    const ovData = {
         hn: parseInt(document.getElementById('editRekapHN').value) || 0,
         tm: parseInt(document.getElementById('editRekapTM').value) || 0,
         pc: parseInt(document.getElementById('editRekapPC').value) || 0,
@@ -3583,6 +3901,11 @@ function simpanEditRekapPegawai() {
         ket: document.getElementById('editRekapKet').value.trim()
     };
 
+    overrides[id] = ovData;
+    if (rawId && rawId !== id) {
+        overrides[rawId] = ovData;
+    }
+
     try {
         sessionStorage.setItem('rekap_override_' + periodeKey, JSON.stringify(overrides));
     } catch (e) {
@@ -3592,9 +3915,12 @@ function simpanEditRekapPegawai() {
     // Sinkronkan ke Firebase jika database aktif
     const database = (typeof db !== "undefined" && db) ? db : (typeof firebase !== "undefined" && firebase.database ? firebase.database() : null);
     if (database) {
-        database.ref(`rekapOverrides/${periodeKey}/${id}`).set(overrides[id]).catch(err => {
+        database.ref(`rekapOverrides/${periodeKey}/${id}`).set(ovData).catch(err => {
             console.warn("Firebase rekap override sync warning:", err);
         });
+        if (rawId && rawId !== id) {
+            database.ref(`rekapOverrides/${periodeKey}/${rawId}`).set(ovData).catch(() => {});
+        }
     }
 
     tutupModalEditRekap();
@@ -3619,13 +3945,20 @@ function kalkulasiRekapDariHistoryItem(histItem) {
         if (saved) overrides = JSON.parse(saved);
     } catch (e) {}
 
-    const employeeIds = Object.keys(pegawaiMap || {}).sort((a, b) => (pegawaiMap[a] || '').localeCompare(pegawaiMap[b] || ''));
+    const employeeIds = Object.keys(pegawaiMap || {}).sort((a, b) => 
+        comparePegawaiByJabatanThenNama(a, b, pegawaiMap[a], pegawaiMap[b])
+    );
     const daysInMonth = (yr !== null && mo !== null) ? new Date(yr, mo + 1, 0).getDate() : 31;
 
     let rows = [];
 
-    employeeIds.forEach((id, index) => {
-        const nama = pegawaiMap[id];
+    employeeIds.forEach((rawId, index) => {
+        const rawNama = pegawaiMap[rawId] || '';
+        // Sandingkan ID PPNPN dan Nama Lengkap dari master pegawai (aktif maupun tidak aktif)
+        const masterPeg = getMasterPegawai(rawId, rawNama);
+        const officialId = masterPeg && masterPeg.id ? String(masterPeg.id).trim() : String(rawId).trim();
+        const officialNama = masterPeg && masterPeg.nama ? String(masterPeg.nama).trim() : (rawNama || rawId);
+
         let role = "STAFF";
         let cs = 0, ct = 0, dl = 0, tk = 0, hn = 0, lj = 0;
         let tm = 0, pc = 0;
@@ -3635,9 +3968,12 @@ function kalkulasiRekapDariHistoryItem(histItem) {
             let dStr = String(d).padStart(2, '0');
             let mStr = String(mo + 1).padStart(2, '0');
             let isoDate = `${yr}-${mStr}-${dStr}`;
-            let key = id + "_" + isoDate;
 
-            let rec = rekapMap[key];
+            let rec = rekapMap[rawId + "_" + isoDate] || 
+                      rekapMap[officialId + "_" + isoDate] ||
+                      (rawNama ? rekapMap[rawNama + "_" + isoDate] : null) ||
+                      (officialNama ? rekapMap[officialNama + "_" + isoDate] : null);
+
             if (!rec) {
                 let dateObj = new Date(yr, mo, d);
                 let dayOfWeek = dateObj.getDay();
@@ -3672,12 +4008,16 @@ function kalkulasiRekapDariHistoryItem(histItem) {
             if (st.includes("PC")) pc++;
         }
 
+        const officialJabatan = masterPeg && masterPeg.jabatanPosisi 
+            ? masterPeg.jabatanPosisi.trim() 
+            : getJabatanPegawaiMaster(officialId, role, officialNama);
+
         let totalHadir = hn + tm + pc;
         let isOverridden = false;
         let catatan = "";
 
-        if (overrides[id]) {
-            const ov = overrides[id];
+        const ov = overrides[officialId] || overrides[rawId];
+        if (ov) {
             isOverridden = true;
             if (ov.hn !== undefined) hn = Number(ov.hn);
             if (ov.tm !== undefined) tm = Number(ov.tm);
@@ -3691,15 +4031,17 @@ function kalkulasiRekapDariHistoryItem(histItem) {
             totalHadir = hn + tm + pc;
         }
 
-        let riwayat = (typeof hitungAkumulasiCutiTahunan === 'function') ? hitungAkumulasiCutiTahunan(id, yr) : { totalCT: ct };
+        let riwayat = (typeof hitungAkumulasiCutiTahunan === 'function') ? hitungAkumulasiCutiTahunan(officialId, yr, rawId) : { totalCT: ct };
         let totalCT = riwayat.totalCT || ct || 0;
         let sisaCuti = 12 - totalCT;
 
         rows.push({
             no: index + 1,
-            id: id,
-            nama: nama,
-            role: role,
+            id: officialId,
+            rawId: rawId,
+            nama: officialNama,
+            jabatan: officialJabatan,
+            role: officialJabatan,
             hariKerja: hariKerja,
             hn: hn,
             tm: tm,
@@ -3940,13 +4282,15 @@ async function exportRekapPDF() {
 
         let rowsData = item._precomputedRows || kalkulasiRekapDariHistoryItem(item);
         let periodeStr = item.namaBulanTahun ? item.namaBulanTahun.trim() : (item.reportTitle ? item.reportTitle.replace("Rekap Final Presensi ", "").trim() : "Periode");
-        let unitStr = item.unitKerja || item.savedByUnitKerja || "Kantor Regional XIV BKN Manokwari";
+        let rawUnit = item.unitKerja || item.savedByUnitKerja || "Kanreg XIV BKN";
+        let unitStr = (rawUnit === "UPT Sorong" || rawUnit === "UPT BKN Sorong") ? "UPT BKN Sorong" : "Kanreg XIV BKN";
 
-        // Kop Laporan
+        // Kop Laporan Per Bulan
         doc.setFontSize(13);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(30, 41, 59);
-        doc.text("KANTOR REGIONAL XIV BADAN KEPEGAWAIAN NEGARA", 148.5, 13, { align: "center" });
+        let kopInstansi = unitStr === "UPT BKN Sorong" ? "UPT BKN SORONG" : "KANTOR REGIONAL XIV BADAN KEPEGAWAIAN NEGARA";
+        doc.text(kopInstansi, 148.5, 13, { align: "center" });
 
         doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
@@ -3955,8 +4299,8 @@ async function exportRekapPDF() {
 
         doc.setFontSize(8.5);
         doc.setFont("helvetica", "normal");
-        doc.setTextColor(100, 116, 139);
         let infoStr = `Unit Kerja: ${unitStr}  |  Sumber: Cloud Database Final  |  Dicetak: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+        
         doc.text(infoStr, 148.5, 24, { align: "center" });
 
         // Garis Pembatas
@@ -3964,12 +4308,12 @@ async function exportRekapPDF() {
         doc.setLineWidth(0.4);
         doc.line(14, 27, 283, 27);
 
-        // Header Tabel
+        // Header Tabel Per Bulan (Tanpa Baris Total Sesuai Permintaan)
         const tableHeaders = [
-            ["No", "ID", "Nama Pegawai & PPNPN", "Jabatan / Posisi", "Hari Kerja", "HN", "TM", "PC", "CS", "CT", "DL", "TK", "LJ", "Sisa Cuti"]
+            ["No", "ID PPNPN", "Nama Pegawai & PPNPN", "Jabatan / Posisi", "Hari Kerja", "HN", "TM", "PC", "CS", "CT", "DL", "TK", "LJ", "Sisa Cuti"]
         ];
 
-        // Body Tabel
+        // Body Tabel Per Bulan
         const tableBody = rowsData.map(r => [
             r.no,
             r.id,
@@ -3985,30 +4329,6 @@ async function exportRekapPDF() {
             r.tk,
             r.lj,
             r.sisaCuti
-        ]);
-
-        // Baris Total
-        let totHN = rowsData.reduce((acc, r) => acc + (r.hn || 0), 0);
-        let totTM = rowsData.reduce((acc, r) => acc + (r.tm || 0), 0);
-        let totPC = rowsData.reduce((acc, r) => acc + (r.pc || 0), 0);
-        let totCS = rowsData.reduce((acc, r) => acc + (r.cs || 0), 0);
-        let totCT = rowsData.reduce((acc, r) => acc + (r.ct || 0), 0);
-        let totDL = rowsData.reduce((acc, r) => acc + (r.dl || 0), 0);
-        let totTK = rowsData.reduce((acc, r) => acc + (r.tk || 0), 0);
-        let totLJ = rowsData.reduce((acc, r) => acc + (r.lj || 0), 0);
-
-        tableBody.push([
-            { content: "TOTAL", colSpan: 4, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: "-", styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: String(totHN), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: String(totTM), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: String(totPC), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: String(totCS), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: String(totCT), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: String(totDL), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: String(totTK), styles: { halign: 'center', fontStyle: 'bold', textColor: [220, 38, 38], fillColor: [241, 245, 249] } },
-            { content: String(totLJ), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: "-", styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } }
         ]);
 
         runAutoTable({
@@ -4053,6 +4373,187 @@ async function exportRekapPDF() {
         });
     });
 
+    // ==========================================================================
+    // HALAMAN TERAKHIR: TABEL REKAPITULASI TOTAL / AKUMULASI SELURUH BULAN
+    // ==========================================================================
+    doc.addPage('a4', 'landscape');
+
+    // Kumpulkan dan akumulasi data seluruh pegawai dari setiap bulan final
+    const totalPegawaiMap = {};
+    let targetYr = (finalItems[0] && finalItems[0].activeYear !== undefined) ? Number(finalItems[0].activeYear) : new Date().getFullYear();
+
+    finalItems.forEach(item => {
+        let rowsData = item._precomputedRows || kalkulasiRekapDariHistoryItem(item);
+        rowsData.forEach(r => {
+            let key = r.id || r.rawId || r.nama;
+            if (!totalPegawaiMap[key]) {
+                totalPegawaiMap[key] = {
+                    id: r.id,
+                    rawId: r.rawId,
+                    nama: r.nama,
+                    role: r.role || r.jabatan,
+                    hariKerja: 0,
+                    hn: 0,
+                    tm: 0,
+                    pc: 0,
+                    cs: 0,
+                    ct: 0,
+                    dl: 0,
+                    tk: 0,
+                    lj: 0,
+                    totalCT: 0
+                };
+            }
+            totalPegawaiMap[key].hariKerja += (Number(r.hariKerja) || 0);
+            totalPegawaiMap[key].hn += (Number(r.hn) || 0);
+            totalPegawaiMap[key].tm += (Number(r.tm) || 0);
+            totalPegawaiMap[key].pc += (Number(r.pc) || 0);
+            totalPegawaiMap[key].cs += (Number(r.cs) || 0);
+            totalPegawaiMap[key].ct += (Number(r.ct) || 0);
+            totalPegawaiMap[key].dl += (Number(r.dl) || 0);
+            totalPegawaiMap[key].tk += (Number(r.tk) || 0);
+            totalPegawaiMap[key].lj += (Number(r.lj) || 0);
+            totalPegawaiMap[key].totalCT += (Number(r.ct) || 0);
+            if (r.nama) totalPegawaiMap[key].nama = r.nama;
+            if (r.role) totalPegawaiMap[key].role = r.role;
+        });
+    });
+
+    // Urutkan pegawai tabel total berdasarkan hierarki jabatan standar
+    const sortedTotalEmployees = Object.values(totalPegawaiMap).sort((a, b) => 
+        comparePegawaiByJabatanThenNama(a.id, b.id, a.nama, b.nama, a.role, b.role)
+    );
+
+    // Hitung grand total agregat
+    let grandHariKerja = 0, grandHN = 0, grandTM = 0, grandPC = 0;
+    let grandCS = 0, grandCT = 0, grandDL = 0, grandTK = 0, grandLJ = 0;
+
+    const tableTotalBody = sortedTotalEmployees.map((emp, idx) => {
+        grandHariKerja += emp.hariKerja;
+        grandHN += emp.hn;
+        grandTM += emp.tm;
+        grandPC += emp.pc;
+        grandCS += emp.cs;
+        grandCT += emp.ct;
+        grandDL += emp.dl;
+        grandTK += emp.tk;
+        grandLJ += emp.lj;
+
+        let sisa = 12 - emp.totalCT;
+        if (typeof hitungAkumulasiCutiTahunan === 'function') {
+            let riw = hitungAkumulasiCutiTahunan(emp.id, targetYr, emp.rawId);
+            if (riw && riw.totalCT !== undefined) {
+                sisa = 12 - riw.totalCT;
+            }
+        }
+        let sisaCutiStr = sisa <= 0 ? "HABIS" : `${sisa} Hari`;
+
+        return [
+            idx + 1,
+            emp.id,
+            emp.nama,
+            emp.role,
+            emp.hariKerja,
+            emp.hn,
+            emp.tm,
+            emp.pc,
+            emp.cs,
+            emp.ct,
+            emp.dl,
+            emp.tk,
+            emp.lj,
+            sisaCutiStr
+        ];
+    });
+
+    // Baris Total Keseluruhan di akhir tabel total
+    tableTotalBody.push([
+        { content: "TOTAL KESELURUHAN", colSpan: 4, styles: { halign: 'center', fontStyle: 'bold', fillColor: [224, 231, 255], textColor: [30, 58, 138] } },
+        { content: String(grandHariKerja), styles: { halign: 'center', fontStyle: 'bold', fillColor: [224, 231, 255] } },
+        { content: String(grandHN), styles: { halign: 'center', fontStyle: 'bold', fillColor: [224, 231, 255] } },
+        { content: String(grandTM), styles: { halign: 'center', fontStyle: 'bold', fillColor: [224, 231, 255] } },
+        { content: String(grandPC), styles: { halign: 'center', fontStyle: 'bold', fillColor: [224, 231, 255] } },
+        { content: String(grandCS), styles: { halign: 'center', fontStyle: 'bold', fillColor: [224, 231, 255] } },
+        { content: String(grandCT), styles: { halign: 'center', fontStyle: 'bold', fillColor: [224, 231, 255] } },
+        { content: String(grandDL), styles: { halign: 'center', fontStyle: 'bold', fillColor: [224, 231, 255] } },
+        { content: String(grandTK), styles: { halign: 'center', fontStyle: 'bold', textColor: [220, 38, 38], fillColor: [224, 231, 255] } },
+        { content: String(grandLJ), styles: { halign: 'center', fontStyle: 'bold', fillColor: [224, 231, 255] } },
+        { content: "-", styles: { halign: 'center', fontStyle: 'bold', fillColor: [224, 231, 255] } }
+    ]);
+
+    // Dapatkan unit kerja untuk halaman tabel total
+    let firstUnitRaw = (finalItems[0] && (finalItems[0].unitKerja || finalItems[0].savedByUnitKerja)) || "Kanreg XIV BKN";
+    let firstUnit = (firstUnitRaw === "UPT Sorong" || firstUnitRaw === "UPT BKN Sorong") ? "UPT BKN Sorong" : "Kanreg XIV BKN";
+    let kopInstansiTotal = firstUnit === "UPT BKN Sorong" ? "UPT BKN SORONG" : "KANTOR REGIONAL XIV BADAN KEPEGAWAIAN NEGARA";
+
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 41, 59);
+    doc.text(kopInstansiTotal, 148.5, 13, { align: "center" });
+
+    // Judul Khusus Tabel Total dengan Warna Indigo / Deep Navy Pembeda
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 58, 138);
+    doc.text("LAPORAN REKAPITULASI TOTAL KEHADIRAN PEGAWAI & PPNPN (AKUMULASI KESELURUHAN)", 148.5, 19, { align: "center" });
+
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(71, 85, 105);
+    let infoStrTotal = `Unit Kerja: ${firstUnit}  |  Periode: Akumulasi Seluruh Laporan Final (${finalItems.length} Bulan)  |  Dicetak: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+    doc.text(infoStrTotal, 148.5, 24, { align: "center" });
+
+    // Garis Pembatas Warna Indigo
+    doc.setDrawColor(99, 102, 241);
+    doc.setLineWidth(0.6);
+    doc.line(14, 27, 283, 27);
+
+    // Header Tabel Total dengan Label 'Total ...'
+    const tableTotalHeaders = [
+        ["No", "ID PPNPN", "Nama Pegawai & PPNPN", "Jabatan / Posisi", "Total Hari", "Total HN", "Total TM", "Total PC", "Total CS", "Total CT", "Total DL", "Total TK", "Total Libur", "Sisa Cuti"]
+    ];
+
+    runAutoTable({
+        startY: 30,
+        head: tableTotalHeaders,
+        body: tableTotalBody,
+        theme: 'grid',
+        styles: {
+            font: 'helvetica',
+            fontSize: 7.5,
+            cellPadding: 1.8,
+            lineColor: [199, 210, 254],
+            lineWidth: 0.15
+        },
+        headStyles: {
+            fillColor: [30, 58, 138], // Warna pembeda tegas: Deep Royal Blue / Indigo
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            halign: 'center',
+            valign: 'middle'
+        },
+        columnStyles: {
+            0: { halign: 'center', cellWidth: 10 },
+            1: { halign: 'center', cellWidth: 18, font: 'courier' },
+            2: { halign: 'left', cellWidth: 54, fontStyle: 'bold' },
+            3: { halign: 'center', cellWidth: 30 },
+            4: { halign: 'center', cellWidth: 15 },
+            5: { halign: 'center', cellWidth: 12 },
+            6: { halign: 'center', cellWidth: 12 },
+            7: { halign: 'center', cellWidth: 12 },
+            8: { halign: 'center', cellWidth: 12 },
+            9: { halign: 'center', cellWidth: 12 },
+            10: { halign: 'center', cellWidth: 12 },
+            11: { halign: 'center', cellWidth: 12 },
+            12: { halign: 'center', cellWidth: 12 },
+            13: { halign: 'center', cellWidth: 22 }
+        },
+        alternateRowStyles: {
+            fillColor: [248, 250, 255] // Nuansa lembut indigo
+        },
+        margin: { left: 14, right: 14, bottom: 18 }
+    });
+
     // Tambahkan nomor halaman di footer seluruh halaman
     const totalPages = doc.internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
@@ -4060,11 +4561,22 @@ async function exportRekapPDF() {
         doc.setFontSize(8);
         doc.setTextColor(148, 163, 184);
         doc.text(`Halaman ${p} dari ${totalPages}`, 283, 202, { align: 'right' });
-        doc.text("Laporan Kehadiran Pegawai dan PPNPN - Kanreg XIV BKN Manokwari", 14, 202);
+        doc.text("Laporan Kehadiran Pegawai dan PPNPN - Kanreg XIV BKN", 14, 202);
     }
 
-    let currentYear = new Date().getFullYear();
-    doc.save(`Rekap_Kehadiran_Final_Seluruh_Bulan_${currentYear}.pdf`);
+    // Tampilkan PDF Preview di tab baru (tidak otomatis unduh)
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    const newTab = window.open(pdfUrl, '_blank');
+    if (!newTab) {
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 }
 
 window.exportRekapExcel = exportRekapExcel;
@@ -4207,11 +4719,11 @@ function onJabatanPosisiChange() {
     const jobSetEl = document.getElementById("masterJobSet");
     if (!jobSetEl) return;
 
-    if (jabatan === "Tenaga Keamanan") {
+    if (jabatan === "Tenaga Keamanan" || jabatan === "Tenaga Keamanan - PPPK") {
         jobSetEl.value = "Satpam";
-    } else if (jabatan === "Tenaga Kebersihan") {
+    } else if (jabatan === "Tenaga Kebersihan" || jabatan === "Tenaga Kebersihan - PPPK") {
         jobSetEl.value = "Staff - 2";
-    } else if (jabatan === "Tenaga Pengemudi" || jabatan === "Tenaga Pramubakti") {
+    } else if (jabatan === "Tenaga Pengemudi" || jabatan === "Tenaga Pengemudi - PPPK" || jabatan === "Tenaga Pramubakti" || jabatan === "Tenaga Pramubakti - PPPK" || jabatan === "ASN PPPK") {
         jobSetEl.value = "Staff - 1";
     }
     onJobSetChange();
@@ -4279,13 +4791,13 @@ function resetFormMasterPegawai() {
     if (document.getElementById("masterNama")) document.getElementById("masterNama").value = "";
     if (document.getElementById("masterTglLahir")) document.getElementById("masterTglLahir").value = "";
     if (document.getElementById("masterAlamat")) document.getElementById("masterAlamat").value = "";
-    if (document.getElementById("masterJabatanPosisi")) document.getElementById("masterJabatanPosisi").value = "Tenaga Keamanan";
+    if (document.getElementById("masterJabatanPosisi")) document.getElementById("masterJabatanPosisi").value = "Tenaga Keamanan - PPPK";
     if (document.getElementById("masterJobSet")) document.getElementById("masterJobSet").value = "Satpam";
     if (document.getElementById("masterKontrakMulai")) document.getElementById("masterKontrakMulai").value = "2026-01-01";
     if (document.getElementById("masterKontrakBerakhir")) document.getElementById("masterKontrakBerakhir").value = "2026-12-31";
     if (document.getElementById("masterKontrak")) document.getElementById("masterKontrak").value = "";
     if (document.getElementById("masterNominal")) document.getElementById("masterNominal").value = "Rp. 3.600.000";
-    if (document.getElementById("masterUnitKerja")) document.getElementById("masterUnitKerja").value = "Kanreg XIV";
+    if (document.getElementById("masterUnitKerja")) document.getElementById("masterUnitKerja").value = "Kanreg XIV BKN";
     onJobSetChange();
 }
 
@@ -4309,7 +4821,9 @@ function simpanMasterPegawai() {
     const kontrakBerakhirRaw = document.getElementById("masterKontrakBerakhir")?.value;
     const nomorKontrak = document.getElementById("masterKontrak")?.value.trim() || "-";
     const nominal = document.getElementById("masterNominal")?.value.trim() || "Rp. 3.600.000";
-    const unitKerja = document.getElementById("masterUnitKerja")?.value || "Kanreg XIV";
+    let unitKerja = document.getElementById("masterUnitKerja")?.value || "Kanreg XIV BKN";
+    if (unitKerja === "Kanreg XIV") unitKerja = "Kanreg XIV BKN";
+    if (unitKerja === "UPT Sorong") unitKerja = "UPT BKN Sorong";
 
     if (!id || !nama) {
         alert("Harap lengkapi ID Pegawai dan Nama Lengkap PPNPN!");
@@ -4392,7 +4906,21 @@ function muatDatabasePegawai() {
         // Urutkan berdasarkan ID
         window.cachedListPegawai.sort((a, b) => (a.id || '').localeCompare(b.id || '', undefined, { numeric: true }));
 
+        try {
+            localStorage.setItem('cached_database_pegawai', JSON.stringify(window.cachedListPegawai));
+        } catch (e) {}
+
         renderTabelDatabasePegawai();
+
+        // Sinkronkan tabel rekapitulasi kehadiran jika laporan final sedang aktif
+        if (typeof muatRekapKehadiranDariPilihan === 'function' && window.activeRekapPeriodeKey) {
+            muatRekapKehadiranDariPilihan();
+        }
+
+        // Sinkronkan tabel presensi harian jika sedang ditampilkan
+        if (typeof renderTabel === 'function' && window.tableDataMaster && window.tableDataMaster.length > 0) {
+            filterData();
+        }
     }, (error) => {
         console.error("Error Firebase Database Pegawai:", error);
         if (tbody) {
@@ -4563,7 +5091,10 @@ function editMasterPegawai(id) {
         if (document.getElementById("masterKontrakBerakhir")) document.getElementById("masterKontrakBerakhir").value = parseStringToYMD(p.kontrakBerakhir) || "";
         if (document.getElementById("masterKontrak")) document.getElementById("masterKontrak").value = p.nomorKontrak || "";
         if (document.getElementById("masterNominal")) document.getElementById("masterNominal").value = p.nominal || "Rp. 3.600.000";
-        if (document.getElementById("masterUnitKerja")) document.getElementById("masterUnitKerja").value = p.unitKerja || "Kanreg XIV";
+        let uFix = p.unitKerja || "Kanreg XIV BKN";
+        if (uFix === "Kanreg XIV") uFix = "Kanreg XIV BKN";
+        if (uFix === "UPT Sorong") uFix = "UPT BKN Sorong";
+        if (document.getElementById("masterUnitKerja")) document.getElementById("masterUnitKerja").value = uFix;
 
         onJobSetChange();
     });
