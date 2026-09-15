@@ -903,6 +903,10 @@ function updateAuditBox() {
             machineAlertBox.style.display = 'none';
         }
     }
+
+    if (typeof recheckStatusFinalReport === "function") {
+        recheckStatusFinalReport();
+    }
 }
 
 function jalankanRecheck() {
@@ -1348,7 +1352,7 @@ function resetFilter() {
 
 function prosesExcelJadwal() {
     const fileInput = document.getElementById('uploadJadwal');
-    const file = fileInput.files[0];
+    const file = fileInput ? fileInput.files[0] : null;
     if (!file) { alert("Silakan pilih file Excel Jadwal Shift terlebih dahulu."); return; }
 
     const reader = new FileReader();
@@ -1356,71 +1360,201 @@ function prosesExcelJadwal() {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
-            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
             const rawAoA = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
 
-            globalRekap = {}; dataPegawai = {}; isFingerprintUploaded = false; lastRekapState = null;
-            document.getElementById('btnUndoMassal').disabled = true;
-            document.getElementById('sectionManualWrapper').style.display = 'none'; 
+            if (!rawAoA || rawAoA.length === 0) {
+                alert("File Excel jadwal kosong atau tidak terbaca.");
+                return;
+            }
+
+            globalRekap = {}; 
+            dataPegawai = {}; 
+            isFingerprintUploaded = false; 
+            lastRekapState = null;
+
+            const btnUndo = document.getElementById('btnUndoMassal');
+            if (btnUndo) btnUndo.disabled = true;
+            const secManual = document.getElementById('sectionManualWrapper');
+            if (secManual) secManual.style.display = 'none';
+
             let tahun = new Date().getFullYear();
             let bulan = new Date().getMonth();
             let foundMonth = false;
+            let day1ColIndex = -1;
+            let currentSectionRole = "STAFF";
 
-            const bulanMap = { 'JANUARY': 0, 'JANUARI': 0, 'FEBRUARY': 1, 'FEBRUARI': 1, 'MARCH': 2, 'MARET': 2, 'APRIL': 3, 'MAY': 4, 'MEI': 4, 'JUNE': 5, 'JUNI': 5, 'JULY': 6, 'JULI': 6, 'AUGUST': 7, 'AGUSTUS': 7, 'SEPTEMBER': 8, 'OCTOBER': 9, 'OKTOBER': 9, 'NOVEMBER': 10, 'DECEMBER': 11, 'DESEMBER': 11 };
+            const bulanMap = {
+                'JANUARI': 0, 'JANUARY': 0, 'JAN': 0,
+                'FEBRUARI': 1, 'FEBRUARY': 1, 'FEB': 1,
+                'MARET': 2, 'MARCH': 2, 'MAR': 2,
+                'APRIL': 3, 'APR': 3,
+                'MEI': 4, 'MAY': 4,
+                'JUNI': 5, 'JUNE': 5, 'JUN': 5,
+                'JULI': 6, 'JULY': 6, 'JUL': 6,
+                'AGUSTUS': 7, 'AUGUST': 7, 'AGU': 7, 'AGT': 7, 'AUG': 7,
+                'SEPTEMBER': 8, 'SEP': 8, 'SEPT': 8,
+                'OKTOBER': 9, 'OCTOBER': 9, 'OKT': 9, 'OCT': 9,
+                'NOVEMBER': 10, 'NOV': 10,
+                'DESEMBER': 11, 'DECEMBER': 11, 'DES': 11, 'DEC': 11
+            };
 
             for (let i = 0; i < rawAoA.length; i++) {
-                let row = rawAoA[i];
-                
+                let row = rawAoA[i] || [];
+
+                // 1. Ekstraksi Periode Bulan & Tahun dari header (mis: "PERIODE: JUNI 2026")
                 if (!foundMonth) {
-                    for(let c = 0; c < 5; c++) {
-                        if (row[c] && row[c].toString().toUpperCase().includes("PERIODE:")) {
-                            let textPeriode = row[c].toString().toUpperCase();
-                            let parts = textPeriode.replace("PERIODE:", "").trim().split(" ");
-                            if (parts.length >= 2) {
-                                if (bulanMap[parts[0]] !== undefined) {
-                                    bulan = bulanMap[parts[0]];
-                                    tahun = parseInt(parts[1]);
+                    for (let c = 0; c < row.length; c++) {
+                        let cellVal = row[c] ? row[c].toString().trim() : "";
+                        if (!cellVal) continue;
+                        let cellUpper = cellVal.toUpperCase();
+                        if (cellUpper.includes("PERIODE") || cellUpper.includes("BULAN") || /\b202\d\b/.test(cellUpper)) {
+                            for (let [bName, bIdx] of Object.entries(bulanMap)) {
+                                let reMonthYear = new RegExp(`\\b${bName}\\b.*?\\b(20[2-3]\\d)\\b`, 'i');
+                                let reYearMonth = new RegExp(`\\b(20[2-3]\\d)\\b.*?\\b${bName}\\b`, 'i');
+                                let m1 = cellUpper.match(reMonthYear);
+                                if (m1) {
+                                    bulan = bIdx;
+                                    tahun = parseInt(m1[1]);
                                     setBulanAktif(new Date(tahun, bulan, 1));
                                     foundMonth = true;
+                                    break;
+                                }
+                                let m2 = cellUpper.match(reYearMonth);
+                                if (m2) {
+                                    tahun = parseInt(m2[1]);
+                                    bulan = bIdx;
+                                    setBulanAktif(new Date(tahun, bulan, 1));
+                                    foundMonth = true;
+                                    break;
                                 }
                             }
+                        }
+                        if (foundMonth) break;
+                    }
+                }
+
+                // 2. Deteksi Letak Kolom Tanggal 1 (Header Angka 1, 2, 3...)
+                if (day1ColIndex === -1) {
+                    for (let c = 0; c < row.length; c++) {
+                        let v = row[c] ? row[c].toString().trim() : "";
+                        let vNext = (c + 1 < row.length && row[c + 1]) ? row[c + 1].toString().trim() : "";
+                        if (v === "1" && vNext === "2") {
+                            day1ColIndex = c;
                             break;
                         }
                     }
                 }
 
-                let rawRole = row[0] ? row[0].toString().toUpperCase().trim() : "";
-                let isNewFormat = (rawRole === "SATPAM" || rawRole === "STAFF" || rawRole === "MAGANG");
-                let offset = isNewFormat ? 1 : 0; 
+                // 3. Deteksi Baris Pembatas Kategori/Jabatan (misal "SATPAM", "STAFF", dll)
+                let nonEmptyCells = row.map(x => (x !== null && x !== undefined ? x.toString().trim() : "")).filter(x => x.length > 0);
+                if (nonEmptyCells.length === 1) {
+                    let t = nonEmptyCells[0].toUpperCase();
+                    if (t.includes("SATPAM") || t.includes("KEAMANAN") || t.includes("SECURITY")) currentSectionRole = "SATPAM";
+                    else if (t.includes("STAFF")) currentSectionRole = "STAFF";
+                    else if (t.includes("KEBERSIHAN") || t.includes("CLEANING")) currentSectionRole = "Tenaga Kebersihan";
+                    else if (t.includes("PRAMUBAKTI")) currentSectionRole = "Tenaga Pramubakti";
+                    else if (t.includes("PENGEMUDI") || t.includes("DRIVER")) currentSectionRole = "Tenaga Pengemudi";
+                    else if (t.includes("PPPK") || t.includes("ASN")) currentSectionRole = "ASN PPPK";
+                    else if (t.includes("MAGANG")) currentSectionRole = "MAGANG";
+                }
 
-                let noUrut = parseInt(row[0 + offset]);
-                let idPegawai = row[1 + offset] ? row[1 + offset].toString().trim() : "";
-                let namaPegawai = row[2 + offset] ? row[2 + offset].toString().trim() : "";
+                // 4. Deteksi Baris Data Pegawai
+                let colA = row[0] ? row[0].toString().trim() : "";
+                let colB = row[1] ? row[1].toString().trim() : "";
+                let colC = row[2] ? row[2].toString().trim() : "";
+                let colD = row[3] ? row[3].toString().trim() : "";
 
-                if (!isNaN(noUrut) && idPegawai.length >= 4 && namaPegawai !== "" && namaPegawai !== "Hari" && namaPegawai !== "Tanggal") {
-                    dataPegawai[idPegawai] = namaPegawai; 
-                    let actualRole = isNewFormat ? rawRole : "STAFF"; 
-                    
+                let idPegawai = "";
+                let namaPegawai = "";
+                let rolePegawai = currentSectionRole;
+
+                // Format A (Sesuai Screenshot): Col A Kategori (SATPAM), Col B No (1), Col C ID (140024), Col D Nama (Pierre Pentury)
+                if (!isNaN(parseInt(colB)) && /^\d{4,10}$/.test(colC) && colD !== "" && colD !== "Hari" && colD !== "Tanggal") {
+                    idPegawai = colC;
+                    namaPegawai = colD;
+                    if (colA && isNaN(parseInt(colA))) {
+                        let rUpper = colA.toUpperCase();
+                        if (rUpper.includes("SATPAM") || rUpper.includes("KEAMANAN")) rolePegawai = "SATPAM";
+                        else if (rUpper.includes("STAFF")) rolePegawai = "STAFF";
+                        else if (rUpper.includes("KEBERSIHAN")) rolePegawai = "Tenaga Kebersihan";
+                        else if (rUpper.includes("PRAMUBAKTI")) rolePegawai = "Tenaga Pramubakti";
+                        else if (rUpper.includes("PENGEMUDI") || rUpper.includes("DRIVER")) rolePegawai = "Tenaga Pengemudi";
+                        else if (rUpper.includes("PPPK") || rUpper.includes("ASN")) rolePegawai = "ASN PPPK";
+                        else if (rUpper.includes("MAGANG")) rolePegawai = "MAGANG";
+                        else rolePegawai = colA;
+                    }
+                }
+                // Format B: Col A No (1), Col B ID (140024), Col C Nama
+                else if (!isNaN(parseInt(colA)) && /^\d{4,10}$/.test(colB) && colC !== "" && colC !== "Hari" && colC !== "Tanggal") {
+                    idPegawai = colB;
+                    namaPegawai = colC;
+                }
+                // Format C: Pencarian Cerdas Kolom ID (4-10 Digit) diikuti Nama
+                else {
+                    for (let c = 0; c < Math.min(row.length, 5); c++) {
+                        let val = row[c] ? row[c].toString().trim() : "";
+                        let nextVal = (c + 1 < row.length && row[c + 1]) ? row[c + 1].toString().trim() : "";
+                        if (/^\d{4,10}$/.test(val) && nextVal.length >= 2 && nextVal !== "Tanggal" && nextVal !== "Hari" && isNaN(parseInt(nextVal))) {
+                            idPegawai = val;
+                            namaPegawai = nextVal;
+                            break;
+                        }
+                    }
+                }
+
+                // Jika data pegawai ditemukan, bangun rekap shift bulanan
+                if (idPegawai && namaPegawai) {
+                    dataPegawai[idPegawai] = namaPegawai;
                     let daysInMonth = new Date(tahun, bulan + 1, 0).getDate();
-                    
+                    let startCol = (day1ColIndex !== -1) ? day1ColIndex : 4;
+
                     for (let d = 1; d <= daysInMonth; d++) {
-                        let shiftCode = row[2 + offset + d] ? row[2 + offset + d].toString().trim().toUpperCase() : "";
-                        let isoDate = `${tahun}-${String(bulan+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                        let colIdx = startCol + (d - 1);
+                        let shiftCode = (colIdx < row.length && row[colIdx]) ? row[colIdx].toString().trim().toUpperCase() : "";
+                        let isoDate = `${tahun}-${String(bulan + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                         let key = idPegawai + "_" + isoDate;
-                        
+
                         let sTipe = "OFF";
                         let mStat = null;
 
-                        if (shiftCode === "P" || shiftCode === "1") sTipe = "P";
-                        else if (shiftCode === "M" || shiftCode === "MLM") sTipe = "M";
-                        else if (shiftCode === "CT") { sTipe = "CT"; mStat = "CT"; }
-                        else if (shiftCode === "S") { sTipe = "CS"; mStat = "CS"; }
-                        else if (shiftCode === "OFF") sTipe = "OFF";
+                        if (shiftCode === "P" || shiftCode === "1" || shiftCode === "PAGI") {
+                            sTipe = "P";
+                        } else if (shiftCode === "M" || shiftCode === "MLM" || shiftCode === "MALAM" || shiftCode === "3") {
+                            sTipe = "M";
+                        } else if (shiftCode === "S" || shiftCode === "SIANG" || shiftCode === "2") {
+                            if (rolePegawai.toUpperCase().includes("SATPAM")) sTipe = "M";
+                            else { sTipe = "CS"; mStat = "CS"; }
+                        } else if (shiftCode === "CT" || shiftCode === "CUTI") {
+                            sTipe = "CT";
+                            mStat = "CT";
+                        } else if (shiftCode === "CS" || shiftCode === "SAKIT") {
+                            sTipe = "CS";
+                            mStat = "CS";
+                        } else if (shiftCode === "DL" || shiftCode === "DINAS") {
+                            sTipe = "DL";
+                            mStat = "DL";
+                        } else if (shiftCode === "TK" || shiftCode === "ALPA") {
+                            sTipe = "TK";
+                            mStat = "TK";
+                        } else if (shiftCode === "OFF" || shiftCode === "LIBUR" || shiftCode === "LJ") {
+                            sTipe = "OFF";
+                        } else if (shiftCode === "") {
+                            let dow = new Date(tahun, bulan, d).getDay();
+                            if (rolePegawai.toUpperCase().includes("SATPAM")) sTipe = "OFF";
+                            else sTipe = (dow === 0 || dow === 6) ? "OFF" : "P";
+                        }
 
                         globalRekap[key] = {
-                            id: idPegawai, nama: namaPegawai, tanggal: isoDate,
-                            shiftTipe: sTipe, waktuMasuk: null, waktuPulang: null, manualStatus: mStat,
-                            role: actualRole
+                            id: idPegawai,
+                            nama: namaPegawai,
+                            tanggal: isoDate,
+                            shiftTipe: sTipe,
+                            waktuMasuk: null,
+                            waktuPulang: null,
+                            manualStatus: mStat,
+                            role: rolePegawai
                         };
                     }
                 }
@@ -1428,17 +1562,190 @@ function prosesExcelJadwal() {
 
             if (!foundMonth) setBulanAktif(new Date());
 
-            fileInput.value = ""; 
+            const totalPegawaiLoaded = Object.keys(dataPegawai).length;
+            if (totalPegawaiLoaded === 0) {
+                alert("Peringatan: Tidak ditemukan baris data Pegawai dan PPNPN yang valid pada file Excel. Pastikan file memiliki nomor, ID Pegawai, dan Nama Pegawai.");
+                return;
+            }
+
+            if (fileInput) fileInput.value = "";
             updateCheckboxPegawaiManual();
             updateFilterNamaDropdown();
-            document.getElementById('sectionPresensi').style.display = 'block';
-            renderTabel();
-            alert("Jadwal shift berhasil dibuat. Silakan unggah file data fingerprint untuk melengkapi jam kehadiran.");
 
-        } catch (error) { alert("Mohon maaf, terjadi kendala saat membaca file jadwal: " + error.message); }
+            const secPresensi = document.getElementById('sectionPresensi');
+            if (secPresensi) secPresensi.style.display = 'block';
+
+            renderTabel();
+            alert(`Jadwal shift berhasil dibuat untuk ${totalPegawaiLoaded} pegawai (${BULAN_INDO[bulan]} ${tahun}). Silakan unggah file data fingerprint untuk melengkapi jam kehadiran.`);
+
+        } catch (error) {
+            console.error("Error membaca file jadwal:", error);
+            alert("Mohon maaf, terjadi kendala saat membaca file jadwal: " + error.message);
+        }
     };
     reader.readAsArrayBuffer(file);
 }
+
+// ==========================================================================
+// FITUR UNDUH TEMPLATE EXCEL JADWAL SHIFT RESMI (SESUAI CONTOH KANREG XIV)
+// ==========================================================================
+function unduhTemplateJadwalExcel() {
+    if (typeof XLSX === "undefined") {
+        alert("Pustaka XLSX belum termuat. Silakan periksa koneksi internet Anda.");
+        return;
+    }
+
+    let targetYear = (typeof activeYear !== "undefined" && activeYear) ? activeYear : new Date().getFullYear();
+    let targetMonth = (typeof activeMonth !== "undefined" && activeMonth !== null) ? activeMonth : new Date().getMonth();
+    let namaBulanStr = BULAN_INDO[targetMonth] ? BULAN_INDO[targetMonth].toUpperCase() : "JUNI";
+    let periodeLabel = `${namaBulanStr} ${targetYear}`;
+
+    const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const hariShort = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+    const aoa = [];
+
+    // Baris 1: Judul Utama
+    aoa.push(["", "", "", "KANTOR REGIONAL XIV BKN MANOKWARI"]);
+    // Baris 2: Spasi kosong
+    aoa.push([]);
+    // Baris 3: Sub-Judul
+    aoa.push(["", "", "", "JADWAL PPNPN"]);
+    // Baris 4: Periode
+    aoa.push(["", "", "", `PERIODE: ${periodeLabel}`]);
+
+    // Baris 5: Header Tanggal (1..31)
+    const row5 = ["(Rumus)", "No", "ID\nPPNPN", "Tanggal"];
+    for (let d = 1; d <= 31; d++) {
+        row5.push(d);
+    }
+    aoa.push(row5);
+
+    // Baris 6: Header Nama Hari
+    const row6 = ["Kode", "", "", "Hari"];
+    for (let d = 1; d <= 31; d++) {
+        if (d <= daysInMonth) {
+            let dow = new Date(targetYear, targetMonth, d).getDay();
+            row6.push(hariShort[dow]);
+        } else {
+            row6.push("Min");
+        }
+    }
+    aoa.push(row6);
+
+    // Dapatkan data pegawai jika ada di cache
+    const pegawaiMaster = (window.cachedListPegawai && window.cachedListPegawai.length > 0)
+        ? window.cachedListPegawai.filter(p => p.status === "Aktif" || !p.status)
+        : [];
+
+    const satpamList = pegawaiMaster.filter(p => (p.jabatanPosisi || '').toUpperCase().includes("KEAMANAN") || (p.jobSet || '').toUpperCase().includes("SATPAM"));
+    const staffList = pegawaiMaster.filter(p => !satpamList.includes(p));
+
+    // SECTION SATPAM
+    aoa.push(["", "", "", "SATPAM"]);
+    aoa.push(["SATPAM"]);
+
+    if (satpamList.length > 0) {
+        satpamList.forEach((peg, idx) => {
+            const rowData = ["SATPAM", idx + 1, peg.id, peg.nama];
+            for (let d = 1; d <= 31; d++) {
+                if (d > daysInMonth) {
+                    rowData.push("OFF");
+                } else {
+                    // Pola rotasi shift satpam 4 hari kerja 2 hari libur
+                    let rotasi = (idx * 3 + d) % 6;
+                    if (rotasi === 4 || rotasi === 5) rowData.push("OFF");
+                    else if (rotasi === 0 || rotasi === 1) rowData.push("M");
+                    else rowData.push("P");
+                }
+            }
+            aoa.push(rowData);
+        });
+    } else {
+        // Sample Satpam sesuai contoh screenshot user
+        const sampleSatpam = [
+            { no: 1, id: "140024", nama: "Pierre Pentury", shifts: ["M","M","M","M","OFF","OFF","P","P","P","P","OFF","OFF","P","P","M","M","OFF","OFF","P","P","P","P","OFF","OFF","M","M","M","M","OFF","OFF","OFF"] },
+            { no: 2, id: "140013", nama: "Sander Mamoribo", shifts: ["M","M","M","M","OFF","OFF","P","P","P","P","OFF","OFF","P","P","M","M","OFF","OFF","P","P","P","P","OFF","OFF","M","M","M","M","OFF","OFF","OFF"] },
+            { no: 3, id: "140008", nama: "Fernando Maruanaya", shifts: ["P","P","P","P","OFF","OFF","M","M","M","M","OFF","OFF","M","M","P","P","OFF","OFF","M","M","M","M","OFF","OFF","P","P","P","P","OFF","OFF","OFF"] },
+            { no: 4, id: "140020", nama: "Victor Lam Awom", shifts: ["P","P","P","P","OFF","OFF","M","M","M","M","OFF","OFF","M","M","P","P","OFF","OFF","M","M","M","M","OFF","OFF","P","P","P","P","OFF","OFF","OFF"] }
+        ];
+        sampleSatpam.forEach(item => {
+            const r = ["SATPAM", item.no, item.id, item.nama, ...item.shifts];
+            aoa.push(r);
+        });
+    }
+
+    // SECTION STAFF / NON-SATPAM
+    aoa.push([]);
+    aoa.push(["", "", "", "STAFF"]);
+    aoa.push(["STAFF"]);
+
+    if (staffList.length > 0) {
+        staffList.forEach((peg, idx) => {
+            let roleTag = peg.jobSet || "STAFF";
+            const rowData = [roleTag, idx + 1, peg.id, peg.nama];
+            for (let d = 1; d <= 31; d++) {
+                if (d > daysInMonth) {
+                    rowData.push("OFF");
+                } else {
+                    let dow = new Date(targetYear, targetMonth, d).getDay();
+                    rowData.push((dow === 0 || dow === 6) ? "OFF" : "P");
+                }
+            }
+            aoa.push(rowData);
+        });
+    } else {
+        // Sample Staff
+        const sampleStaff = [
+            { no: 1, id: "140011", nama: "Agustinus Komok Silli" },
+            { no: 2, id: "140015", nama: "Siti Rahma" },
+            { no: 3, id: "140018", nama: "Hasanuddin" }
+        ];
+        sampleStaff.forEach(item => {
+            const r = ["STAFF", item.no, item.id, item.nama];
+            for (let d = 1; d <= 31; d++) {
+                if (d > daysInMonth) {
+                    r.push("OFF");
+                } else {
+                    let dow = new Date(targetYear, targetMonth, d).getDay();
+                    r.push((dow === 0 || dow === 6) ? "OFF" : "P");
+                }
+            }
+            aoa.push(r);
+        });
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Konfigurasi Lebar Kolom
+    ws['!cols'] = [
+        { wch: 10 }, // A: (Rumus) / Kode / SATPAM
+        { wch: 5 },  // B: No
+        { wch: 14 }, // C: ID PPNPN
+        { wch: 28 }, // D: Tanggal / Hari / Nama Pegawai
+    ];
+    for (let d = 1; d <= 31; d++) {
+        ws['!cols'].push({ wch: 6 }); // E..AI
+    }
+
+    // Konfigurasi Merge Cells
+    ws['!merges'] = [
+        { s: { r: 0, c: 3 }, e: { r: 0, c: 15 } }, // Title
+        { s: { r: 2, c: 3 }, e: { r: 2, c: 10 } }, // Subtitle
+        { s: { r: 3, c: 3 }, e: { r: 3, c: 10 } }, // Periode
+        { s: { r: 4, c: 1 }, e: { r: 5, c: 1 } },  // No
+        { s: { r: 4, c: 2 }, e: { r: 5, c: 2 } },  // ID PPNPN
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Jadwal PPNPN");
+
+    const fileName = `Template_Jadwal_Shift_PPNPN_${periodeLabel.replace(/\s+/g, '_')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+}
+
+window.unduhTemplateJadwalExcel = unduhTemplateJadwalExcel;
+
 
 function prosesExcel() {
     const fileInput = document.getElementById('uploadExcel');
@@ -1509,7 +1816,8 @@ function prosesExcel() {
         
         fileInput.value = ""; 
         isFingerprintUploaded = true; 
-        document.getElementById('sectionManualWrapper').style.display = 'block'; 
+        const secManual = document.getElementById('sectionManualWrapper');
+        if (secManual) secManual.style.display = 'block';
         renderTabel();
         alert("Data mesin absensi berhasil diintegrasikan dengan jadwal presensi.");
     };
@@ -3294,47 +3602,473 @@ function simpanEditRekapPegawai() {
     alert("Data rekap presensi pegawai berhasil diperbarui.");
 }
 
-function exportRekapExcel() {
-    if (!window.rekapRowsMaster || window.rekapRowsMaster.length === 0) {
-        alert("Belum ada data rekap presensi yang dapat diekspor.");
-        return;
-    }
+// ==========================================================================
+// HELPER PERHITUNGAN REKAP PER BULAN DARI RIWAYAT FINAL CLOUD
+// ==========================================================================
+function kalkulasiRekapDariHistoryItem(histItem) {
+    if (!histItem) return [];
+    let pegawaiMap = histItem.dataPegawai || {};
+    let rekapMap = histItem.globalRekap || {};
+    let yr = histItem.activeYear !== undefined ? Number(histItem.activeYear) : new Date().getFullYear();
+    let mo = histItem.activeMonth !== undefined ? Number(histItem.activeMonth) : new Date().getMonth();
+    let periodeKey = 'history_' + histItem.id;
 
+    let overrides = {};
+    try {
+        let saved = sessionStorage.getItem('rekap_override_' + periodeKey);
+        if (saved) overrides = JSON.parse(saved);
+    } catch (e) {}
+
+    const employeeIds = Object.keys(pegawaiMap || {}).sort((a, b) => (pegawaiMap[a] || '').localeCompare(pegawaiMap[b] || ''));
+    const daysInMonth = (yr !== null && mo !== null) ? new Date(yr, mo + 1, 0).getDate() : 31;
+
+    let rows = [];
+
+    employeeIds.forEach((id, index) => {
+        const nama = pegawaiMap[id];
+        let role = "STAFF";
+        let cs = 0, ct = 0, dl = 0, tk = 0, hn = 0, lj = 0;
+        let tm = 0, pc = 0;
+        let hariKerja = 0;
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            let dStr = String(d).padStart(2, '0');
+            let mStr = String(mo + 1).padStart(2, '0');
+            let isoDate = `${yr}-${mStr}-${dStr}`;
+            let key = id + "_" + isoDate;
+
+            let rec = rekapMap[key];
+            if (!rec) {
+                let dateObj = new Date(yr, mo, d);
+                let dayOfWeek = dateObj.getDay();
+                if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    lj++;
+                } else {
+                    tk++;
+                    hariKerja++;
+                }
+                continue;
+            }
+
+            if (rec.role) role = rec.role;
+            let shift = rec.shiftTipe || "P";
+            if (shift !== "OFF") hariKerja++;
+
+            let st = "TK";
+            if (typeof getStatusKehadiran === "function") {
+                st = getStatusKehadiran(rec);
+            } else {
+                st = (rec.waktuMasuk || rec.waktuPulang) ? "HN" : "TK";
+            }
+
+            if (st === "HN") hn++;
+            else if (st === "CS" || st === "Sakit") cs++;
+            else if (st === "CT" || st === "Cuti") ct++;
+            else if (st === "DL" || st === "Dinas Luar") dl++;
+            else if (st === "LJ" || shift === "OFF") lj++;
+            else if (st.includes("TK")) tk++;
+
+            if (st.includes("TM")) tm++;
+            if (st.includes("PC")) pc++;
+        }
+
+        let totalHadir = hn + tm + pc;
+        let isOverridden = false;
+        let catatan = "";
+
+        if (overrides[id]) {
+            const ov = overrides[id];
+            isOverridden = true;
+            if (ov.hn !== undefined) hn = Number(ov.hn);
+            if (ov.tm !== undefined) tm = Number(ov.tm);
+            if (ov.pc !== undefined) pc = Number(ov.pc);
+            if (ov.cs !== undefined) cs = Number(ov.cs);
+            if (ov.ct !== undefined) ct = Number(ov.ct);
+            if (ov.dl !== undefined) dl = Number(ov.dl);
+            if (ov.tk !== undefined) tk = Number(ov.tk);
+            if (ov.lj !== undefined) lj = Number(ov.lj);
+            if (ov.ket !== undefined) catatan = ov.ket;
+            totalHadir = hn + tm + pc;
+        }
+
+        let riwayat = (typeof hitungAkumulasiCutiTahunan === 'function') ? hitungAkumulasiCutiTahunan(id, yr) : { totalCT: ct };
+        let totalCT = riwayat.totalCT || ct || 0;
+        let sisaCuti = 12 - totalCT;
+
+        rows.push({
+            no: index + 1,
+            id: id,
+            nama: nama,
+            role: role,
+            hariKerja: hariKerja,
+            hn: hn,
+            tm: tm,
+            pc: pc,
+            totalHadir: totalHadir,
+            cs: cs,
+            ct: ct,
+            dl: dl,
+            tk: tk,
+            lj: lj,
+            sisaCuti: sisaCuti <= 0 ? "HABIS" : `${sisaCuti} Hari`,
+            catatan: catatan
+        });
+    });
+
+    return rows;
+}
+
+// Helper untuk mengambil daftar final unik terurut kronologis
+function dapatkanDaftarFinalUnik() {
+    let list = (window.cachedFinalHistories || []).slice();
+    list.sort((a, b) => {
+        let tA = Number(a.id) || (a.timestamp ? Number(a.timestamp) : 0);
+        let tB = Number(b.id) || (b.timestamp ? Number(b.timestamp) : 0);
+        return tB - tA;
+    });
+
+    let map = {};
+    let unique = [];
+    list.forEach(item => {
+        let pKey = (item.namaBulanTahun || item.reportTitle || "").replace("Rekap Final Presensi ", "").trim();
+        if (!pKey && item.activeYear !== undefined && item.activeMonth !== undefined) {
+            pKey = `${item.activeYear}_${item.activeMonth}`;
+        }
+        if (pKey && !map[pKey]) {
+            map[pKey] = true;
+            unique.push(item);
+        }
+    });
+
+    // Urutkan kronologis bulan
+    unique.sort((a, b) => {
+        let yA = a.activeYear !== undefined ? Number(a.activeYear) : 2026;
+        let mA = a.activeMonth !== undefined ? Number(a.activeMonth) : 0;
+        let yB = b.activeYear !== undefined ? Number(b.activeYear) : 2026;
+        let mB = b.activeMonth !== undefined ? Number(b.activeMonth) : 0;
+        return (yA * 12 + mA) - (yB * 12 + mB);
+    });
+
+    return unique;
+}
+
+// ==========================================================================
+// EKSPOR REKAP FINAL KE EXCEL (MULTI-SHEET SEMUA BULAN FINAL)
+// ==========================================================================
+async function exportRekapExcel() {
     if (typeof XLSX === 'undefined') {
         alert("Pustaka pembuat Excel (SheetJS) belum siap. Silakan muat ulang halaman.");
         return;
     }
 
-    let targetYear = (typeof activeYear !== 'undefined' && activeYear) ? Number(activeYear) : new Date().getFullYear();
-    const rowsExcel = window.rekapRowsMaster.map(item => {
-        let riwayat = (typeof hitungAkumulasiCutiTahunan === 'function') ? hitungAkumulasiCutiTahunan(item.id, targetYear) : { totalCT: item.ct };
-        let totalCT = riwayat.totalCT || item.ct || 0;
-        let sisa = 12 - totalCT;
-        return {
-            "No": item.no,
-            "ID Pegawai": item.id,
-            "Nama Pegawai dan PPNPN": item.nama,
-            "Kategori": item.role,
-            "Hari Kerja": item.hariKerja,
-            "Hadir Normal (HN)": item.hn,
-            "Terlambat (TM)": item.tm,
-            "Pulang Cepat (PC)": item.pc,
-            "Cuti Sakit (CS)": item.cs,
-            "Cuti Tahunan (CT)": item.ct,
-            "Dinas Luar (DL)": item.dl,
-            "Tanpa Keterangan (TK)": item.tk,
-            "Libur (LJ)": item.lj,
-            "Sisa Cuti Tahunan": sisa <= 0 ? "HABIS" : `${sisa} Hari`
-        };
+    let finalItems = dapatkanDaftarFinalUnik();
+    if (finalItems.length === 0) {
+        const database = (typeof db !== "undefined" && db) ? db : (typeof firebase !== "undefined" && firebase.database ? firebase.database() : null);
+        if (database) {
+            try {
+                const snap = await database.ref('history').once('value');
+                if (snap.exists()) {
+                    window.cachedFinalHistories = [];
+                    snap.forEach(c => {
+                        let it = c.val();
+                        if (it && (it.isFinalReport === true || it.isFinalReport === "true" || (it.reportTitle && it.reportTitle.indexOf("Rekap Final") !== -1))) {
+                            if (!it.id) it.id = c.key;
+                            window.cachedFinalHistories.push(it);
+                        }
+                    });
+                    finalItems = dapatkanDaftarFinalUnik();
+                }
+            } catch (e) {
+                console.warn("Gagal membaca history untuk export excel:", e);
+            }
+        }
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    if (finalItems.length === 0) {
+        if (window.rekapRowsMaster && window.rekapRowsMaster.length > 0) {
+            let targetYear = (typeof activeYear !== 'undefined' && activeYear) ? Number(activeYear) : new Date().getFullYear();
+            let rowsExcel = window.rekapRowsMaster.map(item => {
+                let riwayat = (typeof hitungAkumulasiCutiTahunan === 'function') ? hitungAkumulasiCutiTahunan(item.id, targetYear) : { totalCT: item.ct };
+                let totalCT = riwayat.totalCT || item.ct || 0;
+                let sisa = 12 - totalCT;
+                return {
+                    "No": item.no,
+                    "ID Pegawai": item.id,
+                    "Nama Pegawai & PPNPN": item.nama,
+                    "Jabatan / Posisi": item.role,
+                    "Hari Kerja": item.hariKerja,
+                    "Hadir Normal (HN)": item.hn,
+                    "Terlambat (TM)": item.tm,
+                    "Pulang Cepat (PC)": item.pc,
+                    "Cuti Sakit (CS)": item.cs,
+                    "Cuti Tahunan (CT)": item.ct,
+                    "Dinas Luar (DL)": item.dl,
+                    "Tanpa Keterangan (TK)": item.tk,
+                    "Libur (LJ)": item.lj,
+                    "Sisa Cuti Tahunan": sisa <= 0 ? "HABIS" : `${sisa} Hari`
+                };
+            });
+            let ws = XLSX.utils.json_to_sheet(rowsExcel);
+            let namaPeriode = (typeof namaBulanTahun !== 'undefined' && namaBulanTahun) ? namaBulanTahun.replace(/Rekap Final Presensi /g, "").replace(/[:\\/?*\[\]]/g, "").trim() : "Rekap_Kehadiran";
+            XLSX.utils.book_append_sheet(wb, ws, namaPeriode.substring(0, 31));
+            XLSX.writeFile(wb, `Rekap_Kehadiran_${namaPeriode.replace(/\s+/g, '_')}.xlsx`);
+            return;
+        } else {
+            alert("Belum ada data Rekap Final yang tersimpan di cloud untuk diekspor ke Excel.");
+            return;
+        }
+    }
+
+    let sheetNamesUsed = new Set();
+    finalItems.forEach(item => {
+        let rowsData = kalkulasiRekapDariHistoryItem(item);
+        if (!rowsData || rowsData.length === 0) return;
+
+        let rowsExcel = rowsData.map(r => ({
+            "No": r.no,
+            "ID Pegawai": r.id,
+            "Nama Pegawai & PPNPN": r.nama,
+            "Jabatan / Posisi": r.role,
+            "Hari Kerja": r.hariKerja,
+            "Hadir Normal (HN)": r.hn,
+            "Terlambat (TM)": r.tm,
+            "Pulang Cepat (PC)": r.pc,
+            "Cuti Sakit (CS)": r.cs,
+            "Cuti Tahunan (CT)": r.ct,
+            "Dinas Luar (DL)": r.dl,
+            "Tanpa Keterangan (TK)": r.tk,
+            "Libur (LJ)": r.lj,
+            "Sisa Cuti Tahunan": r.sisaCuti
+        }));
+
+        let ws = XLSX.utils.json_to_sheet(rowsExcel);
+        let sheetName = (item.namaBulanTahun || item.reportTitle || "Rekap").replace(/Rekap Final Presensi /g, "").replace(/[:\\/?*\[\]]/g, "").trim();
+        if (!sheetName) sheetName = "Sheet";
+        sheetName = sheetName.substring(0, 31);
+
+        let baseName = sheetName;
+        let count = 2;
+        while (sheetNamesUsed.has(sheetName)) {
+            sheetName = baseName.substring(0, 28) + `_${count}`;
+            count++;
+        }
+        sheetNamesUsed.add(sheetName);
+
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
     });
 
-    const ws = XLSX.utils.json_to_sheet(rowsExcel);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Rekap Kehadiran");
-
-    let namaPeriode = (typeof namaBulanTahun !== 'undefined' && namaBulanTahun) ? namaBulanTahun.replace(/ /g, "_") : "Bulan_Aktif";
-    XLSX.writeFile(wb, `Rekap_Kehadiran_Bulanan_${namaPeriode}.xlsx`);
+    let currentYear = new Date().getFullYear();
+    XLSX.writeFile(wb, `Rekap_Kehadiran_Final_Seluruh_Bulan_${currentYear}.xlsx`);
 }
+
+// ==========================================================================
+// EKSPOR REKAP FINAL KE PDF (MULTI-HALAMAN SEMUA BULAN FINAL)
+// ==========================================================================
+async function exportRekapPDF() {
+    const jspdfModule = window.jspdf;
+    if (!jspdfModule || !jspdfModule.jsPDF) {
+        alert("Pustaka jsPDF belum siap. Silakan muat ulang halaman.");
+        return;
+    }
+
+    let finalItems = dapatkanDaftarFinalUnik();
+    if (finalItems.length === 0) {
+        const database = (typeof db !== "undefined" && db) ? db : (typeof firebase !== "undefined" && firebase.database ? firebase.database() : null);
+        if (database) {
+            try {
+                const snap = await database.ref('history').once('value');
+                if (snap.exists()) {
+                    window.cachedFinalHistories = [];
+                    snap.forEach(c => {
+                        let it = c.val();
+                        if (it && (it.isFinalReport === true || it.isFinalReport === "true" || (it.reportTitle && it.reportTitle.indexOf("Rekap Final") !== -1))) {
+                            if (!it.id) it.id = c.key;
+                            window.cachedFinalHistories.push(it);
+                        }
+                    });
+                    finalItems = dapatkanDaftarFinalUnik();
+                }
+            } catch (e) {
+                console.warn("Gagal membaca history untuk export PDF:", e);
+            }
+        }
+    }
+
+    if (finalItems.length === 0) {
+        if (window.rekapRowsMaster && window.rekapRowsMaster.length > 0) {
+            let dummyMo = (typeof activeMonth !== 'undefined' && activeMonth !== null) ? activeMonth : new Date().getMonth();
+            let dummyYr = (typeof activeYear !== 'undefined' && activeYear !== null) ? activeYear : new Date().getFullYear();
+            let dummyNama = (typeof namaBulanTahun !== 'undefined' && namaBulanTahun) ? namaBulanTahun : `Periode ${dummyMo + 1} ${dummyYr}`;
+            finalItems = [{
+                id: 'active_session',
+                namaBulanTahun: dummyNama,
+                activeYear: dummyYr,
+                activeMonth: dummyMo,
+                _precomputedRows: window.rekapRowsMaster
+            }];
+        } else {
+            alert("Belum ada data Rekap Final yang tersimpan di cloud untuk diekspor ke PDF.");
+            return;
+        }
+    }
+
+    const { jsPDF } = jspdfModule;
+    const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const runAutoTable = (options) => {
+        if (typeof doc.autoTable === 'function') {
+            doc.autoTable(options);
+        } else if (typeof window.jspdfAutoTable === 'function') {
+            window.jspdfAutoTable(doc, options);
+        } else if (typeof autoTable === 'function') {
+            autoTable(doc, options);
+        } else {
+            throw new Error("Pustaka AutoTable belum tersedia.");
+        }
+    };
+
+    finalItems.forEach((item, pageIdx) => {
+        if (pageIdx > 0) {
+            doc.addPage('a4', 'landscape');
+        }
+
+        let rowsData = item._precomputedRows || kalkulasiRekapDariHistoryItem(item);
+        let periodeStr = item.namaBulanTahun ? item.namaBulanTahun.trim() : (item.reportTitle ? item.reportTitle.replace("Rekap Final Presensi ", "").trim() : "Periode");
+        let unitStr = item.unitKerja || item.savedByUnitKerja || "Kantor Regional XIV BKN Manokwari";
+
+        // Kop Laporan
+        doc.setFontSize(13);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 41, 59);
+        doc.text("KANTOR REGIONAL XIV BADAN KEPEGAWAIAN NEGARA", 148.5, 13, { align: "center" });
+
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(16, 185, 129);
+        doc.text(`LAPORAN REKAPITULASI KEHADIRAN PEGAWAI & PPNPN - ${periodeStr.toUpperCase()}`, 148.5, 19, { align: "center" });
+
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100, 116, 139);
+        let infoStr = `Unit Kerja: ${unitStr}  |  Sumber: Cloud Database Final  |  Dicetak: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+        doc.text(infoStr, 148.5, 24, { align: "center" });
+
+        // Garis Pembatas
+        doc.setDrawColor(203, 213, 225);
+        doc.setLineWidth(0.4);
+        doc.line(14, 27, 283, 27);
+
+        // Header Tabel
+        const tableHeaders = [
+            ["No", "ID", "Nama Pegawai & PPNPN", "Jabatan / Posisi", "Hari Kerja", "HN", "TM", "PC", "CS", "CT", "DL", "TK", "LJ", "Sisa Cuti"]
+        ];
+
+        // Body Tabel
+        const tableBody = rowsData.map(r => [
+            r.no,
+            r.id,
+            r.nama,
+            r.role,
+            r.hariKerja,
+            r.hn,
+            r.tm,
+            r.pc,
+            r.cs,
+            r.ct,
+            r.dl,
+            r.tk,
+            r.lj,
+            r.sisaCuti
+        ]);
+
+        // Baris Total
+        let totHN = rowsData.reduce((acc, r) => acc + (r.hn || 0), 0);
+        let totTM = rowsData.reduce((acc, r) => acc + (r.tm || 0), 0);
+        let totPC = rowsData.reduce((acc, r) => acc + (r.pc || 0), 0);
+        let totCS = rowsData.reduce((acc, r) => acc + (r.cs || 0), 0);
+        let totCT = rowsData.reduce((acc, r) => acc + (r.ct || 0), 0);
+        let totDL = rowsData.reduce((acc, r) => acc + (r.dl || 0), 0);
+        let totTK = rowsData.reduce((acc, r) => acc + (r.tk || 0), 0);
+        let totLJ = rowsData.reduce((acc, r) => acc + (r.lj || 0), 0);
+
+        tableBody.push([
+            { content: "TOTAL", colSpan: 4, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+            { content: "-", styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+            { content: String(totHN), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+            { content: String(totTM), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+            { content: String(totPC), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+            { content: String(totCS), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+            { content: String(totCT), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+            { content: String(totDL), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+            { content: String(totTK), styles: { halign: 'center', fontStyle: 'bold', textColor: [220, 38, 38], fillColor: [241, 245, 249] } },
+            { content: String(totLJ), styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+            { content: "-", styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } }
+        ]);
+
+        runAutoTable({
+            startY: 30,
+            head: tableHeaders,
+            body: tableBody,
+            theme: 'grid',
+            styles: {
+                font: 'helvetica',
+                fontSize: 7.5,
+                cellPadding: 1.8,
+                lineColor: [226, 232, 240],
+                lineWidth: 0.15
+            },
+            headStyles: {
+                fillColor: [30, 41, 59],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                halign: 'center',
+                valign: 'middle'
+            },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 10 },
+                1: { halign: 'center', cellWidth: 18, font: 'courier' },
+                2: { halign: 'left', cellWidth: 54, fontStyle: 'bold' },
+                3: { halign: 'center', cellWidth: 30 },
+                4: { halign: 'center', cellWidth: 15 },
+                5: { halign: 'center', cellWidth: 12 },
+                6: { halign: 'center', cellWidth: 12 },
+                7: { halign: 'center', cellWidth: 12 },
+                8: { halign: 'center', cellWidth: 12 },
+                9: { halign: 'center', cellWidth: 12 },
+                10: { halign: 'center', cellWidth: 12 },
+                11: { halign: 'center', cellWidth: 12 },
+                12: { halign: 'center', cellWidth: 12 },
+                13: { halign: 'center', cellWidth: 22 }
+            },
+            alternateRowStyles: {
+                fillColor: [248, 250, 252]
+            },
+            margin: { left: 14, right: 14, bottom: 18 }
+        });
+    });
+
+    // Tambahkan nomor halaman di footer seluruh halaman
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`Halaman ${p} dari ${totalPages}`, 283, 202, { align: 'right' });
+        doc.text("Laporan Kehadiran Pegawai dan PPNPN - Kanreg XIV BKN Manokwari", 14, 202);
+    }
+
+    let currentYear = new Date().getFullYear();
+    doc.save(`Rekap_Kehadiran_Final_Seluruh_Bulan_${currentYear}.pdf`);
+}
+
+window.exportRekapExcel = exportRekapExcel;
+window.exportRekapPDF = exportRekapPDF;
 
 // ==========================================================================
 // PENGELOLAAN DATABASE MASTER PEGAWAI & PPNPN (TAB REKAP KEHADIRAN)

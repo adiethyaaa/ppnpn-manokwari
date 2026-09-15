@@ -152,10 +152,29 @@ async function openRestoreModal() {
 
         historyData.reverse(); // Urutkan terbaru di atas
 
-        if (historyData.length === 0) {
+        // 💡 DEDUPILKASI: Pastikan untuk Laporan Final (isFinalReport), setiap periode hanya muncul 1 KALI di Restore History
+        let seenFinalPeriods = new Set();
+        let filteredHistoryData = [];
+        historyData.forEach((item) => {
+            if (item.isFinalReport === true || item.isFinalReport === "true") {
+                let pKey = (item.namaBulanTahun || item.reportTitle || "").replace("Rekap Final Presensi ", "").trim();
+                if (!pKey && item.activeYear !== undefined && item.activeMonth !== undefined) {
+                    pKey = `${item.activeYear}_${item.activeMonth}`;
+                }
+                if (pKey) {
+                    if (seenFinalPeriods.has(pKey)) {
+                        return; // Lewati duplikat final report periode ini
+                    }
+                    seenFinalPeriods.add(pKey);
+                }
+            }
+            filteredHistoryData.push(item);
+        });
+
+        if (filteredHistoryData.length === 0) {
             container.innerHTML = "<div style='text-align:center; padding: 25px; color: #7f8c8d; font-style: italic; border: 1px dashed #ccc; border-radius: 5px; background: #fafafa;'>Belum ada riwayat pekerjaan tersimpan.</div>";
         } else {
-            historyData.forEach((item) => {
+            filteredHistoryData.forEach((item) => {
                 let div = document.createElement("div");
                 
                 let isFinal = item.isFinalReport === true;
@@ -401,7 +420,7 @@ function tutupModalRestore() {
 
 
 
-// --- VALIDASI HANYA UNTUK CATATAN "LUPA ABSEN" ---
+// --- VALIDASI HANYA MUNCUL JIKA DATA SUDAH BERSIH (TIDAK ADA LUPA ABSEN) ---
 function recheckStatusFinalReport() {
     const container = document.getElementById("containerSaveFinal");
     const btn = document.getElementById("btnSaveReportFinal");
@@ -411,39 +430,36 @@ function recheckStatusFinalReport() {
     if (!container || !btn || !noteMsg) return;
 
     // Jika belum ada data presensi yang dimuat, sembunyikan wadah tombol
-    if (typeof globalRekap === "undefined" || Object.keys(globalRekap).length === 0) {
+    if (typeof globalRekap === "undefined" || !globalRekap || Object.keys(globalRekap).length === 0) {
         container.style.display = "none";
         return;
     }
-
-    container.style.display = "block";
 
     // Cek apakah ada catatan spesifik "Lupa Absen" di Audit Box
     let hasLupaAbsen = false;
     if (auditBox) {
         const textContent = auditBox.innerText || auditBox.textContent || "";
-        // Memeriksa keberadaan frasa "Lupa Absen" (tidak peka huruf besar/kecil)
-        if (/lupa\s+absen/i.test(textContent)) {
+        // Memeriksa keberadaan frasa "Lupa Absen" atau class warning
+        if (/lupa\s+absen/i.test(textContent) || auditBox.classList.contains("audit-warning")) {
             hasLupaAbsen = true;
         }
     }
 
+    // 💡 ATURAN USER: Hanya muncul jika data sudah bersih
     if (hasLupaAbsen) {
+        container.style.display = "none";
         btn.disabled = true;
-        btn.style.opacity = "0.5";
-        btn.style.cursor = "not-allowed";
-        btn.style.backgroundColor = "#95a5a6";
-        noteMsg.innerText = "⚠️ Tombol ini terkunci karena masih ada pegawai dengan status 'Lupa Absen'. Selesaikan/lengkapi jam masuk/pulang terlebih dahulu.";
     } else {
+        container.style.display = "block";
         btn.disabled = false;
         btn.style.opacity = "1";
         btn.style.cursor = "pointer";
         btn.style.backgroundColor = "#27ae60";
-        noteMsg.innerText = "✅ Tidak ada catatan 'Lupa Absen'. Anda dapat menyimpan rekap final bulan ini.";
+        noteMsg.innerText = "✅ Seluruh data sudah bersih dan tidak ada catatan 'Lupa Absen'. Rekap final bulan ini siap disimpan ke database.";
     }
 }
 
-// --- FUNGSI SAVE REPORT FINAL ---
+// --- FUNGSI SAVE REPORT FINAL (CEK DUPLIKASI & KONFIRMASI REPLACE) ---
 window.saveReportFinal = function() {
     try {
         if (!globalRekap || Object.keys(globalRekap).length === 0) {
@@ -458,7 +474,7 @@ window.saveReportFinal = function() {
         if (btnFinal) {
             originalText = btnFinal.innerHTML;
             btnFinal.disabled = true;
-            btnFinal.innerHTML = "⏳ Memproses Rekap Final...";
+            btnFinal.innerHTML = "⏳ Memeriksa Database Cloud...";
         }
 
         // Helper untuk mengembalikan tombol ke keadaan semula
@@ -490,31 +506,10 @@ window.saveReportFinal = function() {
         let timestamp = now.getTime();
         let dateString = now.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
         let periodeTeks = (typeof namaBulanTahun !== "undefined" && namaBulanTahun) ? namaBulanTahun : "Periode";
+        let targetYear = typeof activeYear !== "undefined" ? activeYear : now.getFullYear();
+        let targetMonth = typeof activeMonth !== "undefined" ? activeMonth : now.getMonth();
 
-        // 💡 PAYLOAD YANG DIBACA OLEH KEDUA MODAL (RESTORE & FINAL HISTORY)
-        let finalPayload = {
-            id: String(timestamp),
-            dateString: dateString,
-            globalRekap: globalRekap,
-            dataPegawai: typeof dataPegawai !== "undefined" ? dataPegawai : {},
-            activeYear: typeof activeYear !== "undefined" ? activeYear : now.getFullYear(),
-            activeMonth: typeof activeMonth !== "undefined" ? activeMonth : now.getMonth(),
-            namaBulanTahun: periodeTeks,
-            reportTitle: "Rekap Final Presensi " + periodeTeks,
-            unitKerja: unitKerjaFix,
-            savedByNama: namaUserFix,
-            namaUser: namaUserFix,
-            isFinalReport: true // 👈 PENTING: Kunci agar otomatis terbaca di History Laporan Final
-        };
-
-        // 4. Konfirmasi User
-        const konfirmasi = confirm(`Apakah Anda yakin ingin menyimpan [ Rekap Final Presensi - ${periodeTeks} - ${unitKerjaFix} ] ke Database Cloud?`);
-        if (!konfirmasi) {
-            restoreButton();
-            return;
-        }
-
-        // 5. Deteksi variabel database Firebase
+        // 4. Deteksi variabel database Firebase
         let dbRef = null;
         if (typeof db !== "undefined" && db) dbRef = db;
         else if (typeof database !== "undefined" && database) dbRef = database;
@@ -526,22 +521,90 @@ window.saveReportFinal = function() {
             return;
         }
 
-        // 6. Simpan ke Node 'history/' Firebase
-        dbRef.ref('history/' + timestamp).set(finalPayload, function(err) {
-            restoreButton(); // Kembalikan status tombol
-            if (err) {
-                alert("❌ Gagal menyimpan Rekap Final: " + err.message);
-            } else {
-                alert(`🏆 Rekap Final Presensi [${periodeTeks}] Berhasil Disimpan!\n\nData ini otomatis tersimpan di:\n1. 🏆 History Laporan Final\n2. 🕒 Restore History`);
-                
-                // Refresh modal Laporan Final & Restore jika sedang terbuka
-                if (typeof openFinalHistoryModal === "function" && document.getElementById("modalFinalHistory")?.style.display === "flex") {
-                    openFinalHistoryModal();
+        // 5. Cek apakah sudah pernah ada laporan final untuk periode ini
+        dbRef.ref('history').once('value').then((snapshot) => {
+            let existingKey = null;
+            let existingEntry = null;
+
+            if (snapshot.exists()) {
+                snapshot.forEach((child) => {
+                    let val = child.val();
+                    if (val && (val.isFinalReport === true || val.isFinalReport === "true" || (val.reportTitle && val.reportTitle.indexOf("Rekap Final") !== -1))) {
+                        let pVal = (val.namaBulanTahun || (val.reportTitle ? val.reportTitle.replace("Rekap Final Presensi ", "") : "")).trim();
+                        let pCur = periodeTeks.trim();
+                        let isSameMonth = (val.activeYear !== undefined && val.activeMonth !== undefined && 
+                                           Number(val.activeYear) === Number(targetYear) && 
+                                           Number(val.activeMonth) === Number(targetMonth));
+                        
+                        if (pVal === pCur || isSameMonth) {
+                            existingKey = child.key;
+                            existingEntry = val;
+                        }
+                    }
+                });
+            }
+
+            // Jika data sudah pernah ada, tampilkan pop up konfirmasi replace
+            if (existingKey) {
+                let prevTime = existingEntry && existingEntry.dateString ? existingEntry.dateString : "sebelumnya";
+                let msgConfirm = `⚠️ Data Rekap Final untuk periode [${periodeTeks}] sudah pernah disimpan (${prevTime}).\n\nApakah Anda yakin ingin me-replace (mengganti) data tersebut dengan data final terbaru ini?`;
+                if (!confirm(msgConfirm)) {
+                    restoreButton();
+                    return;
                 }
-                if (typeof openRestoreModal === "function" && document.getElementById("modalRestore")?.style.display === "flex") {
-                    openRestoreModal();
+            } else {
+                const konfirmasiAwal = confirm(`Apakah Anda yakin ingin menyimpan [ Rekap Final Presensi - ${periodeTeks} - ${unitKerjaFix} ] ke Database Cloud?`);
+                if (!konfirmasiAwal) {
+                    restoreButton();
+                    return;
                 }
             }
+
+            if (btnFinal) btnFinal.innerHTML = "⏳ Menyimpan Rekap Final...";
+
+            let targetSaveKey = existingKey || String(timestamp);
+
+            let finalPayload = {
+                id: targetSaveKey,
+                dateString: dateString,
+                globalRekap: globalRekap,
+                dataPegawai: typeof dataPegawai !== "undefined" ? dataPegawai : {},
+                activeYear: targetYear,
+                activeMonth: targetMonth,
+                namaBulanTahun: periodeTeks,
+                reportTitle: "Rekap Final Presensi " + periodeTeks,
+                unitKerja: unitKerjaFix,
+                savedByNama: namaUserFix,
+                namaUser: namaUserFix,
+                isFinalReport: true
+            };
+
+            // 6. Simpan / Replace ke Node 'history/' Firebase
+            dbRef.ref('history/' + targetSaveKey).set(finalPayload, function(err) {
+                restoreButton();
+                if (err) {
+                    alert("❌ Gagal menyimpan Rekap Final: " + err.message);
+                } else {
+                    let infoAksi = existingKey ? "Berhasil Di-replace (Diperbarui)" : "Berhasil Disimpan";
+                    alert(`🏆 Rekap Final Presensi [${periodeTeks}] ${infoAksi}!\n\nData ini otomatis tersimpan di:\n1. 🏆 History Laporan Final\n2. 🕒 Restore History`);
+                    
+                    // Refresh modal Laporan Final & Restore jika sedang terbuka
+                    if (typeof openFinalHistoryModal === "function" && document.getElementById("modalFinalHistory")?.style.display === "flex") {
+                        openFinalHistoryModal();
+                    }
+                    if (typeof openRestoreModal === "function" && document.getElementById("modalRestore")?.style.display === "flex") {
+                        openRestoreModal();
+                    }
+                    if (typeof segarkanRekapKehadiran === "function") {
+                        segarkanRekapKehadiran();
+                    }
+                }
+            });
+
+        }).catch((err) => {
+            restoreButton();
+            console.error("Gagal memeriksa duplikasi final history:", err);
+            alert("❌ Terjadi kendala saat memeriksa data di cloud: " + err.message);
         });
 
     } catch (err) {

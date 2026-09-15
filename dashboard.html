@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Laporan Presensi Pegawai dan PPNPN v.15</title>
     
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231a5276'/><path d='M25 18h32l18 18v46H25z' fill='white'/><path d='M57 18v18h18' fill='%23d5dbdb'/><rect x='34' y='52' width='7' height='18' rx='2' fill='%233498db'/><rect x='46' y='42' width='7' height='28' rx='2' fill='%232ecc71'/><rect x='58' y='34' width='7' height='36' rx='2' fill='%23f1c40f'/></svg>">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="alternate icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2310b981'/><g fill='%23ffffff' transform='translate(14, 14) scale(3)'><path d='M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 5.65c1.5.77 2.76 1.86 3.75 3.25.16.22.11.54-.12.7-.23.16-.54.11-.7-.12-.9-1.26-2.04-2.25-3.39-2.94-2.87-1.47-6.54-1.47-9.4.01-1.36.7-2.5 1.7-3.4 2.96-.08.14-.23.21-.39.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51 0 .71-.11.1-.24.16-.38.16zm8.16-2.54c-.11 0-.22-.04-.31-.11-.2-.17-.23-.48-.06-.69 1.13-1.39 1.74-3.05 1.74-4.8 0-3.95-3.37-7.16-7.51-7.16-4.14 0-7.51 3.21-7.51 7.16 0 1.48.42 2.9 1.22 4.1.15.23.09.54-.14.69-.23.15-.54.09-.69-.14-.92-1.39-1.4-3.03-1.4-4.75 0-4.5 3.83-8.16 8.52-8.16s8.52 3.66 8.52 8.16c0 1.98-.69 3.86-1.98 5.44-.1.12-.24.19-.39.19zm-3.62 4.67c-.12 0-.24-.04-.34-.13-.75-.66-1.51-1.05-2.49-1.05-1.03 0-1.89.43-2.73 1.17-.21.18-.52.17-.71-.04-.18-.21-.17-.52.04-.71.97-.86 2.05-1.42 3.4-1.42 1.25 0 2.22.47 3.12 1.27.2.18.22.49.04.7-.09.13-.21.21-.33.21zm-6.28-4.48c-.06 0-.12-.01-.18-.04-.84-.37-1.48-.99-1.89-1.84-.42-.87-.63-1.87-.63-2.97 0-1.46.5-2.83 1.4-3.87.97-1.11 2.33-1.74 3.73-1.74 1.41 0 2.77.63 3.74 1.74.9 1.04 1.4 2.41 1.4 3.87 0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-1.19-.41-2.31-1.15-3.16-.79-.91-1.89-1.42-3.04-1.42-1.15 0-2.25.51-3.04 1.42-.74.85-1.15 1.97-1.15 3.16 0 .91.17 1.73.52 2.44.34.7 1.01 1.22 1.54 1.45.26.11.38.41.27.67-.09.18-.27.27-.47.27z'/></g></svg>">
     <link rel="stylesheet" href="css/style.css">
     
     <!-- SheetJS (xlsx.full.min.js) via CDN -->
@@ -247,6 +248,25 @@
                     </div>
                 </div>
 
+                <!-- SAVE REPORT FINAL: DI ATAS HEADER TABEL PRESENSI (HANYA MUNCUL JIKA DATA SUDAH BERSIH) -->
+                <div id="containerSaveFinal" style="display: none; margin-bottom: 12px; background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1.5px solid #10b981; border-radius: var(--radius-md); padding: 10px 16px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background: #10b981; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0;">
+                                <svg class="icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; font-size: 13px; color: #065f46;">Data Presensi Sudah Bersih &amp; Siap Difinalisasi</div>
+                                <div id="finalNoteMessage" style="font-size: 11.5px; color: #047857; margin-top: 1px;">Seluruh jam kehadiran pegawai telah lengkap tanpa status 'Lupa Absen'.</div>
+                            </div>
+                        </div>
+                        <button id="btnSaveReportFinal" type="button" class="btn btn-excel" style="padding: 8px 18px; font-size: 12px; font-weight: 700; background: #059669; border-color: #047857; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(5, 150, 105, 0.25);" onclick="saveReportFinal()">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            Save Report Final
+                        </button>
+                    </div>
+                </div>
+
                 <!-- TABEL DATA UTAMA -->
                 <div class="table-card">
                     <div class="table-wrapper">
@@ -272,15 +292,6 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
-
-                <!-- TOMBOL SAVE REPORT FINAL (DI BAWAH TABEL) -->
-                <div id="containerSaveFinal" style="margin: 16px 0; text-align: center; display: none;">
-                    <button id="btnSaveReportFinal" class="btn btn-excel" style="padding: 9px 22px; font-size: 13px;" onclick="saveReportFinal()">
-                        <svg class="icon-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        Save Report Final
-                    </button>
-                    <div id="finalNoteMessage" style="margin-top: 6px; font-size: 11.5px; font-weight: 600; color: var(--color-danger);"></div>
                 </div>
 
                 <!-- TOMBOL FULL WIDTH HISTORY LAPORAN FINAL -->
@@ -318,9 +329,13 @@
                         <span id="badgeSumberDataRekap" style="font-size: 11.5px; color: var(--text-secondary); background: #f1f5f9; padding: 4px 10px; border-radius: 999px; border: 1px solid #e2e8f0; font-weight: 600;">
                             Sumber: Cloud Final Database
                         </span>
-                        <button type="button" class="btn btn-excel" onclick="exportRekapExcel()" style="height: 30px; font-size: 11.5px;">
+                        <button type="button" class="btn btn-excel" onclick="exportRekapExcel()" style="height: 30px; font-size: 11.5px;" title="Unduh seluruh rekap kehadiran final per bulan ke Excel (Multi-Sheet)">
                             <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
-                            Unduh Excel Rekap
+                            Unduh Rekap Excel
+                        </button>
+                        <button type="button" class="btn btn-pdf" onclick="exportRekapPDF()" style="height: 30px; font-size: 11.5px; background: #dc2626; border-color: #b91c1c; color: white;" title="Unduh seluruh rekap kehadiran final per bulan ke PDF (Multi-Halaman)">
+                            <svg class="icon-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-4h2a1.5 1.5 0 0 1 0 3H9"/></svg>
+                            Unduh Rekap PDF
                         </button>
                     </div>
                 </div>
@@ -492,10 +507,16 @@
                                     Unggah berkas Excel (.xls / .xlsx) jadwal shift untuk membentuk kalender kerja dasar seluruh Pegawai dan PPNPN.
                                 </p>
                             </div>
-                            <button type="button" class="btn btn-ghost" onclick="bukaModalPegawaiManual()" style="border: 1px solid var(--border-subtle); font-size: 12px; height: 32px; display: inline-flex; align-items: center; gap: 6px;">
-                                <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-                                Input Pegawai dan PPNPN Manual
-                            </button>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-ghost" onclick="unduhTemplateJadwalExcel()" style="border: 1px solid #10b981; color: #047857; font-size: 12px; height: 32px; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; font-weight: 600;" title="Unduh format template Excel jadwal shift resmi sesuai format sistem">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Unduh Template Jadwal (.xlsx)
+                                </button>
+                                <button type="button" class="btn btn-ghost" onclick="bukaModalPegawaiManual()" style="border: 1px solid var(--border-subtle); font-size: 12px; height: 32px; display: inline-flex; align-items: center; gap: 6px;">
+                                    <svg class="icon-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                                    Input Pegawai dan PPNPN Manual
+                                </button>
+                            </div>
                         </div>
 
                         <div class="jadwal-upload-wrapper">
